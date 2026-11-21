@@ -1,0 +1,4 @@
+#!/bin/sh
+echo "SLEEP $*" >>/state/sleep.log
+[ -f /state/real_sleep ] && exec /bin/busybox sleep "$@"
+exit 0

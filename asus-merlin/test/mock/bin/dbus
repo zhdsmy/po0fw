@@ -1,0 +1,8 @@
+#!/bin/sh
+F=/state/dbus.env; touch $F
+case "$1" in
+  get) sed -n "s/^$2=//p" $F;;
+  set) k=${2%%=*}; v=${2#*=}; grep -v "^$k=" $F >$F.t; echo "$k=$v" >>$F.t; mv $F.t $F;;
+  remove) grep -v "^$2=" $F >$F.t; mv $F.t $F;;
+  list) grep "^$2" $F;;
+esac

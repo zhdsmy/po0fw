@@ -1,0 +1,35 @@
+name: release
+
+# 每个方案单独发布，tag 格式为 <方案目录>/v<版本>。
+# 目前只有 asus-merlin 需要打包：推送 asus-merlin/v1.0.0 这样的 tag，就会构建 KoolCenter 离线安装包并上传到 Release。
+on:
+  push:
+    tags: ["asus-merlin/v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  asus-merlin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Check tag is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "tag ${GITHUB_REF_NAME} is not on main"; exit 1; }
+      - name: Check tag matches plugin version
+        run: |
+          version="$(cat asus-merlin/po0fw/version)"
+          [ "asus-merlin/v${version}" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != asus-merlin/v${version}"; exit 1; }
+      - name: Build
+        run: asus-merlin/build.sh
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(cat asus-merlin/po0fw/version)"
+          file="dist/po0fw-${version}.tar.gz"
+          gh release create "${GITHUB_REF_NAME}" "${file}" \
+            --title "ASUS Merlin 插件 v${version}" \
+            --notes "KoolCenter 离线安装包：软件中心 → 离线安装 → 上传 po0fw-${version}.tar.gz。md5 $(md5sum "${file}" | cut -d' ' -f1)"
