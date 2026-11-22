@@ -163,7 +163,8 @@ update() {
         [0-9]*.[0-9]*.[0-9]*.[0-9]*) new=${ip%.*}.0/24;;
         *) status "❌ 响应里没有槽位 $slot" "$body"; log "$reason: 响应里没有槽位 $slot"; return 1;;
     esac
-    summary="白名单 $(printf '%s\n' "$list" | grep -c .)：$(printf '%s\n' "$list" | tr '\n' ' ')"
+    limit=$(printf '%s' "$body" | sed -n 's/.*"limit": *\([0-9][0-9]*\).*/\1/p')
+    summary="白名单 $(printf '%s\n' "$list" | grep -c .)${limit:+/$limit}：$(printf '%s\n' "$list" | tr '\n' ' ')"
 
     old=$po0fw_last
     if [ "$new" = "$old" ]; then

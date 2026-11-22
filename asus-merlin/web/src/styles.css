@@ -15,3 +15,7 @@
 [data-theme="kumo"] {
   isolation: isolate;
 }
+
+@keyframes slot-in {
+  from { opacity: 0; transform: translateY(-0.5rem); }
+}

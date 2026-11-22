@@ -69,7 +69,7 @@ test("defaults, four wire payloads, conditional fields, visibility and saved set
     po0fw_slot: "9", po0fw_interval: "30" });
   await action(2, {});
   await action(3, {});
-  assert.equal(await page.getByRole("textbox", { name: "日志", exact: true }).inputValue(), "");
+  assert.equal(await page.getByRole("log", { name: "日志", exact: true }).innerText(), "暂无日志");
   await page.reload();
   await ready(page);
   assert.equal(await enabled.getAttribute("aria-checked"), "false");
@@ -139,11 +139,19 @@ test("all legacy validation branches and their bypass conditions", async (t) => 
   assert.deepEqual(posts.at(-1).fields, {});
 });
 
-test("wide and narrow layouts, dark controls, multiline status and scrolled read-only log", async (t) => {
+test("wide and narrow layouts, dark controls, slot board, notes and scrolled log", async (t) => {
   const { page, url } = await openPreview(t);
   await page.goto(url);
   await ready(page);
-  assert.equal(await page.locator("main li").count(), 3);
+  for (const note of ["把路由器公网出口所在的 /24 写进 po0 防火墙白名单的固定槽位。", "换 IP 时只替换这个槽位",
+    "每次拨号成功也会立即更新", "网段变化、连续失败 3 次、失败后恢复时各通知一次"]) {
+    await page.getByText(note, { exact: true }).waitFor();
+  }
+  const bays = page.getByRole("list", { name: "白名单槽位" }).getByRole("listitem");
+  assert.deepEqual(await bays.allInnerTexts(), ["#0\n192.0.2\n.0/24", "#1\n本路由器\n198.51.100\n.0/24",
+    "#2\n空闲", "#3\n空闲", "#4\n203.0.113\n.0/24"]);
+  await page.getByText("白名单已用 3/5", { exact: true }).waitFor();
+  await page.getByText("槽位 1：198.51.100.0/24（未变化）", { exact: true }).waitFor();
   for (const width of [1024, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
@@ -153,13 +161,10 @@ test("wide and narrow layouts, dark controls, multiline status and scrolled read
   await page.route("**/_temp/po0fw_log.txt", (r) => r.fulfill({ body: logText }));
   await page.reload();
   await ready(page);
-  const log = page.getByRole("textbox", { name: "日志", exact: true });
-  assert.equal(await log.inputValue(), logText);
-  assert.equal(await log.evaluate((el) => el.readOnly && el.scrollHeight > el.clientHeight &&
+  const log = page.getByRole("log", { name: "日志", exact: true });
+  assert.equal(await log.getByRole("listitem").count(), 80);
+  assert.equal(await log.evaluate((el) => el.scrollHeight > el.clientHeight &&
     Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop) <= 1), true);
-  const status = page.getByText(/白名单 1：192\.0\.2\.0/);
-  assert.match(await status.textContent(), /\n白名单/);
-  assert.equal(await status.evaluate((el) => getComputedStyle(el).whiteSpace), "pre-wrap");
   const sw = page.getByRole("switch");
   const colors = () => sw.evaluate((el) => [el, el.firstElementChild].map((part) => getComputedStyle(part).backgroundColor));
   const light = await colors();

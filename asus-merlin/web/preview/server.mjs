@@ -27,8 +27,18 @@ export function createPreviewServer({
     po0fw_notify: "off", po0fw_bark_url: "", po0fw_tg_token: "", po0fw_tg_chat: "",
     po0fw_tg_api: "", po0fw_proxy: "",
   };
-  let status = "[2026-11-22 12:00:00] 槽位 1：192.0.2.0/24（未变化）\n白名单 1：192.0.2.0/24 #1";
-  let log = "[2026-11-22 12:00:00] web: 槽位 1 无 -> 192.0.2.0/24\n";
+  // Mirrors po0fw_config.sh output; documentation-only addresses.
+  const home = "198.51.100.0/24";
+  const whitelist = new Map([[0, "192.0.2.0/24"], [1, home], [4, "203.0.113.0/24"]]);
+  const summary = () => `白名单 ${whitelist.size}/5：` +
+    [...whitelist].sort(([a], [b]) => a - b).map(([n, ip]) => `${ip} #${n} `).join("");
+  let status = `[2026-11-22 12:00:00] ✅ 槽位 1：${home}（未变化）\n${summary()}`;
+  let log = [
+    `[2026-11-21 08:12:40] wan-start: 槽位 1 无 -> ${home}`,
+    "[2026-11-22 00:00:02] cron: HTTP 429，定时任务暂停 15 分钟",
+    "[2026-11-22 00:31:15] cron: 无法连接 API curl: (28) Connection timed out after 10001 milliseconds",
+    "[2026-11-22 10:51:33] 测试通知已发送（bark）",
+  ].join("\n") + "\n";
   const actions = ["", "保存并应用", "立即更新", "清空日志", "测试通知"];
 
   return createServer(async (req, res) => {
@@ -50,12 +60,20 @@ export function createPreviewServer({
         for (const [key, value] of Object.entries(fields)) {
           if (Object.hasOwn(settings, key) && typeof value === "string") settings[key] = value;
         }
+        // Every action appends a log line so the page's poll always sees a change.
+        const now = `[${new Date().toISOString().replace("T", " ").slice(0, 23)}]`;
         if (action === 3) {
           log = "";
+        } else if (action === 4) {
+          log += `${now} 测试通知已发送（${settings.po0fw_notify}）\n`;
         } else {
-          const line = `[${new Date().toISOString()}] ${actions[action]}`;
-          log += line + "\n";
-          if (action !== 4) status = line + "\n192.0.2.0/24";
+          const slot = Number(settings.po0fw_slot);
+          const old = whitelist.get(slot);
+          for (const [n, ip] of whitelist) if (ip === home) whitelist.delete(n);
+          whitelist.set(slot, home);
+          const head = old === home ? `槽位 ${slot}：${home}（未变化）` : `槽位 ${slot}：${old ?? "无"} → ${home}`;
+          status = `${now} ✅ ${head}\n${summary()}`;
+          log += `${now} web: ${actions[action]}，${head}\n`;
         }
         return send("application/json", JSON.stringify({ result: id }));
       }

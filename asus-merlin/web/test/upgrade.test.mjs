@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { appendFile, copyFile, cp, mkdir, mkdtemp, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { appendFile, copyFile, cp, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -9,6 +9,7 @@ import { button, choose, openPreview, ready, shot } from "./fixture.mjs";
 
 const web = fileURLToPath(new URL("../", import.meta.url));
 const plugin = new URL("../../po0fw/", import.meta.url);
+const version = (await readFile(new URL("version", plugin), "utf8")).trim();
 const bundleName = /^po0fw-app\.[a-f0-9]{20}\.(js|css)$/;
 // Immutable main at the start of the migration, also the 1.1.2 ASP.
 const baseline = "da300bd9c307044092652a4cb4dcebce8368e4e4";
@@ -104,7 +105,7 @@ test("upgrade from the old ASP, then deploy CSS-only and JS-only changes at one 
     assert.deepEqual(requests.slice(count), [scriptPath, cssPath]);
     assert.equal(observed.priorScript, step === "js-change" ? undefined : "yes");
     assert.equal(observed.priorStyle, step === "old-test" ? "yes" : "");
-    assert.equal(await page.getByText("当前版本：1.2.0-test.1", { exact: true }).count(), 1);
+    assert.equal(await page.getByText(version, { exact: true }).count(), 1);
 
     // A fresh navigation within the same package uses the browser's cached copies.
     await navigate();

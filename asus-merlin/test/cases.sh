@@ -36,10 +36,10 @@ notes() { cnt /state/notify.log; }
 
 # ---- 加白请求与解析
 t; resp 1 200 '{"enabled":true,"limit":5,"currentIp":"203.0.113.0\/24","whitelist":[{"ip":"192.0.2.0\/24","slot":0},{"ip":"203.0.113.0\/24","slot":1},{"ip":"198.18.0.0\/24","slot":null},{"ip":"198.18.1.0\/24","slot":4}]}'
-$S run cron; ok first '[ "$(last)" = $HOME_C24 ] && [ "$(notes)" = 0 ] && st2 | grep -q "白名单 4"'
+$S run cron; ok first '[ "$(last)" = $HOME_C24 ] && [ "$(notes)" = 0 ] && st2 | grep -q "^白名单 4/5：192.0.2.0/24 #0 203.0.113.0/24 #1 198.18.0.0/24 # 198.18.1.0/24 #4 *$"'
 
 t $HOME_C24; slot1 $HOME_C24
-$S run cron; ok unchanged 'st | grep -q 未变化 && [ "$(logn)" = 0 ] && [ "$(notes)" = 0 ]'
+$S run cron; ok unchanged 'st | grep -q 未变化 && st2 | grep -q "^白名单 1：" && [ "$(logn)" = 0 ] && [ "$(notes)" = 0 ]'
 
 t $HOME_C24; resp 1 200 '{"whitelist":[{"ip":"198.51.100.77","slot":1}]}'
 $S run cron; ok exact-ip '[ "$(last)" = $NEW_C24 ]'
