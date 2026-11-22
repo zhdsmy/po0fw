@@ -148,8 +148,11 @@ test("wide and narrow layouts, dark controls, slot board, notes and scrolled log
     await page.getByText(note, { exact: true }).waitFor();
   }
   const bays = page.getByRole("list", { name: "白名单槽位" }).getByRole("listitem");
-  assert.deepEqual(await bays.allInnerTexts(), ["#0\n192.0.2\n.0/24", "#1\n本路由器\n198.51.100\n.0/24",
-    "#2\n空闲", "#3\n空闲", "#4\n203.0.113\n.0/24"]);
+  assert.deepEqual(await bays.allInnerTexts(), ["#0\n192.0.2.0/24", "#1\n本路由器\n198.51.100.0/24",
+    "#2\n空闲", "#3\n空闲", "#4\n203.0.113.0/24"]);
+  for (const bay of await bays.all()) {
+    assert.equal(await bay.evaluate((el) => el.scrollWidth <= el.clientWidth), true, "IP must not overflow its bay");
+  }
   await page.getByText("白名单已用 3/5", { exact: true }).waitFor();
   await page.getByText("槽位 1：198.51.100.0/24（未变化）", { exact: true }).waitFor();
   for (const width of [1024, 1280, 1440]) {

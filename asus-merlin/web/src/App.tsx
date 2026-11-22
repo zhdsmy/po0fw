@@ -57,13 +57,12 @@ function SectionHead({ id, title, children }: { id: string; title: string; child
 // A bay is always there; a cartridge sits in it when the slot holds a /24.
 // House marks this router's home egress; a globe marks a /24 pinned by something else.
 function Slot({ n, ip, own }: { n: number; ip: string | null; own: boolean }) {
-  const [, net, mask] = /^(\d+\.\d+\.\d+)(\..*)$/.exec(ip ?? "") ?? [, ip, ""];
   const Icon = own ? HouseLineIcon : GlobeSimpleIcon;
   return (
-    <li className="flex rounded-xl border border-kumo-hairline bg-kumo-canvas p-1 shadow-[inset_0_2px_6px_var(--color-kumo-shadow-drop)]">
+    <li className="flex rounded-xl border border-kumo-hairline bg-kumo-canvas p-0.5 shadow-[inset_0_2px_6px_var(--color-kumo-shadow-drop)]">
       {ip ? (
         <div key={ip} style={{ animationDelay: `${n * 60}ms` } as CSSProperties}
-          className={`flex min-h-24 w-full flex-col justify-between gap-2 rounded-lg border bg-kumo-fill px-2.5 py-2 text-kumo-strong shadow-[0_1px_0_var(--color-kumo-shadow-edge)_inset] motion-safe:animate-[slot-in_360ms_cubic-bezier(.2,.8,.2,1)_both] ${own
+          className={`@container flex min-h-20 w-full flex-col justify-between gap-2 rounded-lg border bg-kumo-fill px-2 py-2 text-kumo-strong shadow-[0_1px_0_var(--color-kumo-shadow-edge)_inset] motion-safe:animate-[slot-in_360ms_cubic-bezier(.2,.8,.2,1)_both] ${own
             ? "border-kumo-brand ring-1 ring-kumo-brand" : "border-kumo-interact"}`}>
           <span className="flex flex-wrap items-center justify-between gap-1 text-xs text-kumo-subtle">
             <span className="tabular-nums">#{n}</span>
@@ -71,13 +70,11 @@ function Slot({ n, ip, own }: { n: number; ip: string | null; own: boolean }) {
               <Icon size={16} weight={own ? "fill" : "regular"} aria-hidden />{own && "本路由器"}
             </span>
           </span>
-          <span className="leading-tight tabular-nums">
-            <span className="block text-base font-semibold">{net}</span>
-            {mask && <span className="block text-xs text-kumo-subtle">{mask}</span>}
-          </span>
+          {/* One line always: the size follows the card width so 255.255.255.0/24 still fits. */}
+          <span className="whitespace-nowrap text-[length:min(1rem,11cqi)] leading-tight font-semibold tabular-nums">{ip}</span>
         </div>
       ) : (
-        <div className="flex min-h-24 w-full flex-col justify-between rounded-lg border border-dashed border-kumo-line px-2.5 py-2 text-xs text-kumo-inactive">
+        <div className="flex min-h-20 w-full flex-col justify-between rounded-lg border border-dashed border-kumo-line px-2 py-2 text-xs text-kumo-inactive">
           <span className="tabular-nums">#{n}</span>
           <span>空闲</span>
         </div>
