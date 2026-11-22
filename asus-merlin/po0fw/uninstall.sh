@@ -7,7 +7,7 @@ flock /tmp/po0fw_run.lock true
 rm -f /koolshare/init.d/S99po0fw.sh
 rm -f /koolshare/scripts/po0fw_config.sh
 rm -f /koolshare/webs/Module_po0fw.asp
-rm -f /koolshare/res/icon-po0fw.png
+rm -f /koolshare/res/icon-po0fw.png /koolshare/res/po0fw-app.js /koolshare/res/po0fw-app.css
 rm -f /tmp/upload/po0fw_log.txt /tmp/upload/po0fw_status.txt /tmp/po0fw_run.lock \
     /tmp/po0fw_backoff /tmp/po0fw_pinned /tmp/po0fw_curl.err /tmp/po0fw_notify.err
 

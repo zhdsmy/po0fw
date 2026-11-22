@@ -3,8 +3,8 @@ import { readFile } from "node:fs/promises";
 
 const plugin = new URL("../../po0fw/", import.meta.url);
 const files = new Map([
-  ["/", ["text/html", new URL("webs/Module_po0fw.asp", plugin)]],
-  ["/Module_po0fw.asp", ["text/html", new URL("webs/Module_po0fw.asp", plugin)]],
+  ["/", ["text/html", new URL("../dist/Module_po0fw.asp", import.meta.url)]],
+  ["/Module_po0fw.asp", ["text/html", new URL("../dist/Module_po0fw.asp", import.meta.url)]],
   ["/res/po0fw-app.js", ["text/javascript", new URL("res/po0fw-app.js", plugin)]],
   ["/res/po0fw-app.css", ["text/css", new URL("res/po0fw-app.css", plugin)]],
   ["/res/icon-po0fw.png", ["image/png", new URL("res/icon-po0fw.png", plugin)]],

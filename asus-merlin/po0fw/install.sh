@@ -7,9 +7,14 @@ for tool in curl flock cru; do
     which "$tool" >/dev/null 2>&1 || { echo_date "缺少 $tool，退出安装"; exit 1; }
 done
 
+# Install assets before exposing the page which references this build.
+for asset in po0fw-app.js po0fw-app.css; do
+    [ -s "$DIR/res/$asset" ] || { echo_date "安装包缺少 $asset"; exit 1; }
+done
+cp -f "$DIR/res/po0fw-app.js" "$DIR/res/po0fw-app.css" /koolshare/res/ || exit 1
+cp -f "$DIR/webs/Module_po0fw.asp" /koolshare/webs/Module_po0fw.asp || exit 1
 cp -f "$DIR/scripts/po0fw_config.sh" /koolshare/scripts/po0fw_config.sh
 cp -f "$DIR/uninstall.sh" /koolshare/scripts/uninstall_po0fw.sh
-cp -f "$DIR/webs/Module_po0fw.asp" /koolshare/webs/Module_po0fw.asp
 cp -f "$DIR/res/icon-po0fw.png" /koolshare/res/icon-po0fw.png
 chmod 755 /koolshare/scripts/po0fw_config.sh /koolshare/scripts/uninstall_po0fw.sh
 # 软件中心在 wan-start 时以 start 参数调用 init.d/S*

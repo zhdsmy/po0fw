@@ -1,6 +1,7 @@
 @import "tailwindcss" source(none);
 @import "@cloudflare/kumo/styles/tailwind";
 @source "./**/*.tsx";
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
 
 :host {
   display: block;

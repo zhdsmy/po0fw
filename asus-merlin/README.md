@@ -60,3 +60,20 @@ asus-merlin/build.sh   # 生成 dist/po0fw-<版本>.tar.gz
 发布新版本：先改 `po0fw/version`，提交到 `main` 后推送 tag `asus-merlin/v<版本>`（如 `asus-merlin/v1.1.0`）。GitHub Actions 会检查 tag 在 `main` 上、和版本号一致，然后构建安装包并上传到 Release。
 
 已在 RT-AX86U（KoolCenter，hnd 平台）上验证。`.valid` 目前只写了 `hnd`；其他平台没有测试过。
+
+## 网页前端
+
+`asus-merlin/web/src/` 存放 React、Kumo 与 Tailwind 源码。ASUS 外框保留在 `po0fw/webs/Module_po0fw.asp`，组件和弹层都挂载在 Shadow DOM，固定深色。
+
+在 `asus-merlin/web/` 下使用 Node.js 22.18 或更高版本运行：
+
+```sh
+npm ci
+npm run typecheck
+npm run build
+npm run preview        # 终端给出本地网址，Ctrl-C 停止
+npm test               # 在另一个终端运行，自动启动隔离的 mock
+```
+
+预览使用本地 ASUS 外框桩、假配置和内存接口。测试需要 Playwright 对应的 Chromium，可用 `npx playwright-core install chromium` 安装。
+构建将 JS/CSS 写入 `po0fw/res/`，并把两者的内容摘要填入 `web/dist/Module_po0fw.asp`。打包脚本和预览使用同一份生成页，Shadow DOM 的 CSS 沿用脚本的缓存键。路由器只需提供静态文件。
