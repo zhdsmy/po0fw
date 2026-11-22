@@ -10,13 +10,15 @@
  *     本机网段已钉在另一个槽位，说明已经加白，按成功处理（响应不含 currentIp）。
  *   - 无效 token：400 {"code":400,"message":"serviceId is required"}。
  *
- * 参数：tokens=pgnfw_xxx[@槽位][,pgnfw_yyy[@槽位]]&skip_ssid=Wi-Fi名[,Wi-Fi名]
+ * 参数：tokens=pgnfw_xxx[@槽位][,pgnfw_yyy[@槽位]]&skip_ssid=Wi-Fi名[,Wi-Fi名]&notify_update=0|1
  *   skip_ssid：连着这些 Wi-Fi 时不请求（家宽由路由器维护时，避免手机把家宽网段钉进自己的槽位）。
+ *   notify_update：填 1 时，打开后第一次加白成功推送当前网段，之后网段变化推送「旧 → 新」。
  */
 
 var API = "https://124.221.69.228/api/firewall/";
 var RETRY_DELAYS = [3, 8]; // 秒。网络错误和 HTTP 5xx 重试，network-changed 触发时网络可能还没就绪
 var STATE_KEY = "po0fw_state";
+var LAST_KEY = "po0fw_last"; // notify_update 打开时，上次推送过的出口 /24
 var NAME = "po0 防火墙加白";
 
 function parseArgs(arg) {
@@ -50,7 +52,6 @@ function redact(s) {
   return String(s).replace(/pgnfw_[A-Za-z0-9_-]*/g, "pgnfw_***");
 }
 
-// 白名单条目和 currentIp 可能是精确 IP，也可能是 x.x.x.0/24。两边都是精确 IP 时要求全等。
 // 白名单条目和出口是否同一 /24：两边都是精确 IP 时要求相同，有一边是 /24 时比较前三段
 var IPV4 = /^(\d+\.\d+\.\d+)\.\d+(\/24)?$/;
 function sameC24(a, b) {
@@ -60,6 +61,11 @@ function sameC24(a, b) {
   if (!x || !y) return String(a) === String(b);
   if (!x[2] && !y[2]) return x[0] === y[0];
   return x[1] === y[1];
+}
+
+function c24(ip) {
+  var m = IPV4.exec(String(ip || ""));
+  return m ? m[1] + ".0/24" : "";
 }
 
 function post(url) {
@@ -149,7 +155,7 @@ function isBad(state) {
 
 // state：每个 token 一项 ok/fail（暂时性错误沿用上次的值，没有上次记 ?），或 no-token。
 // 只在 state 变化时通知：变成有失败时通知失败；从失败恢复到全部 ok 时通知「已恢复」。
-// 首次成功、出口 IP 变化、错误措辞变化都不通知。
+// 首次成功、错误措辞变化都不通知；出口网段由 noteExit 按 notify_update 处理。
 function finish(allOk, state, title, content) {
   var prev = $persistentStore.read(STATE_KEY);
   if (state !== prev) {
@@ -165,6 +171,21 @@ function finish(allOk, state, title, content) {
   });
 }
 
+// notify_update 打开时：第一次加白成功推送当前网段，之后网段变化推送「旧 → 新」。
+// 关闭时清掉记录，下次打开重新从第一次算。
+function noteExit(net, slots) {
+  var last = $persistentStore.read(LAST_KEY);
+  if (!notifyUpdate) {
+    if (last) $persistentStore.write("", LAST_KEY);
+    return;
+  }
+  if (!net || net === last) return;
+  $persistentStore.write(net, LAST_KEY);
+  var where = slots.length ? " · 槽位 " + slots.join(",") : "";
+  if (last) $notification.post(NAME, "出口网段已更新" + where, last + " → " + net);
+  else $notification.post(NAME, "已加白" + where, net);
+}
+
 function run(items) {
   var prev = $persistentStore.read(STATE_KEY);
   var prevParts = prev && prev !== "no-token" ? prev.split(",") : [];
@@ -175,14 +196,21 @@ function run(items) {
   ).then(function (results) {
     var okCount = 0;
     var exitIp = "";
+    var okNet = ""; // 只取加白成功的结果，未生效时不算变化
+    var slots = [];
     var parts = [];
     var lines = [];
     results.forEach(function (r, i) {
       if (r.ok) okCount++;
       if (r.currentIp) exitIp = r.currentIp;
+      if (r.ok && r.currentIp) {
+        okNet = c24(r.currentIp);
+        if (items[i].slot !== null) slots.push(items[i].slot);
+      }
       parts.push(r.ok ? "ok" : r.transient ? prevParts[i] || "?" : "fail");
       lines.push(describe(items[i], r, i));
     });
+    noteExit(okNet, slots);
     var title = "po0 加白 " + okCount + "/" + results.length + (exitIp ? " · 出口 " + exitIp : "");
     finish(okCount === results.length, parts.join(","), title, lines.join("\n"));
   });
@@ -196,6 +224,7 @@ var skip = String(args.skip_ssid || "")
     return s.trim();
   })
   .filter(Boolean);
+var notifyUpdate = /^(1|true|on|yes)$/i.test(String(args.notify_update || "").trim());
 var ssid = typeof $network === "object" && $network && $network.wifi ? $network.wifi.ssid : null;
 
 if (ssid && skip.indexOf(ssid) >= 0) {

@@ -1,17 +1,17 @@
 #!name=po0 防火墙加白
 #!desc=把本机直连出口所在 /24 加入 po0 防火墙白名单。切换网络时立即执行，另有定时检查兜底（默认每 10 分钟）。源码：github.com/zhdsmy/po0fw
 #!category=po0
-#!arguments=tokens:"",skip_ssid:"",cron:"*/10 * * * *"
-#!arguments-desc=tokens: pgnfw_ token，多个用英文逗号分隔。token 后加 @槽位 可固定槽位：例如手机用 @0，家里的设备用 @1。skip_ssid: 连着这些 Wi-Fi 时不请求，多个用英文逗号分隔；手机填家里的 Wi-Fi 名（家宽由路由器维护时），常驻家里的设备留空。cron: 定时检查的 cron 表达式，默认每 10 分钟；作备份的设备可以改成 7,37 * * * *（每 30 分钟，和路由器的整 5 分钟错开）。
+#!arguments=tokens:"",skip_ssid:"",cron:"*/10 * * * *",notify_update:"0"
+#!arguments-desc=tokens: pgnfw_ token，多个用英文逗号分隔。token 后加 @槽位 可固定槽位：例如手机用 @0，家里的设备用 @1。skip_ssid: 连着这些 Wi-Fi 时不请求，多个用英文逗号分隔；手机填家里的 Wi-Fi 名（家宽由路由器维护时），常驻家里的设备留空。cron: 定时检查的 cron 表达式，默认每 10 分钟；作备份的设备可以改成 7,37 * * * *（每 30 分钟，和路由器的整 5 分钟错开）。notify_update: 填 1 时推送加白结果：打开后第一次成功推送当前网段，之后网段变化推送「旧 → 新」；默认 0 不推送。手机用蜂窝时网段变化频繁，推送会多。
 
 [Rule]
 # 加白 API 必须直连（脚本里也指定了 policy=DIRECT，这条规则覆盖其他程序的请求）
 IP-CIDR,124.221.69.228/32,DIRECT,no-resolve
 
 [Script]
-po0fw-cron = type=cron,cronexp="{{{cron}}}",script-path=po0fw.js,timeout=60,argument="tokens={{{tokens}}}&skip_ssid={{{skip_ssid}}}"
-po0fw-event = type=event,event-name=network-changed,script-path=po0fw.js,timeout=60,argument="tokens={{{tokens}}}&skip_ssid={{{skip_ssid}}}"
-po0fw-panel = type=generic,script-path=po0fw.js,timeout=60,argument="tokens={{{tokens}}}&skip_ssid={{{skip_ssid}}}"
+po0fw-cron = type=cron,cronexp="{{{cron}}}",script-path=po0fw.js,timeout=60,argument="tokens={{{tokens}}}&skip_ssid={{{skip_ssid}}}&notify_update={{{notify_update}}}"
+po0fw-event = type=event,event-name=network-changed,script-path=po0fw.js,timeout=60,argument="tokens={{{tokens}}}&skip_ssid={{{skip_ssid}}}&notify_update={{{notify_update}}}"
+po0fw-panel = type=generic,script-path=po0fw.js,timeout=60,argument="tokens={{{tokens}}}&skip_ssid={{{skip_ssid}}}&notify_update={{{notify_update}}}"
 
 [Panel]
 po0fw = script-name=po0fw-panel,title=po0 防火墙加白,content=点击刷新,update-interval=300

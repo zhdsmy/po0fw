@@ -127,11 +127,36 @@ test("暂时性错误面板显示失败，但不改状态、不通知", async ()
   assert.equal(r.notes.length, 0);
 });
 
-test("出口 IP 变化不通知", async () => {
-  const store = {};
+test("notify_update 默认关闭：出口变化不推送，也不留记录", async () => {
+  const store = { po0fw_last: "192.0.2.0/24" }; // 之前打开过
   await run({ argument: "tokens=pgnfw_abc", responses: [OK], store });
   const r = await run({ argument: "tokens=pgnfw_abc", responses: [okWith({ currentIp: "192.0.2.0/24" })], store });
   assert.equal(r.notes.length, 0);
+  assert.ok(!store.po0fw_last);
+});
+
+test("notify_update=1：第一次成功推送当前网段，变化推送旧 → 新，未变化不推送", async () => {
+  const store = {};
+  const argument = "tokens=pgnfw_abc@0&notify_update=1";
+  const moved = { currentIp: "192.0.2.7", whitelist: [{ ip: "192.0.2.0/24", slot: 0 }] };
+  let r = await run({ argument, responses: [OK], store });
+  assert.deepEqual(r.notes, [["po0 防火墙加白", "已加白 · 槽位 0", "203.0.113.0/24"]]);
+  r = await run({ argument, responses: [OK], store });
+  assert.equal(r.notes.length, 0);
+  r = await run({ argument, responses: [okWith(moved)], store });
+  assert.deepEqual(r.notes, [["po0 防火墙加白", "出口网段已更新 · 槽位 0", "203.0.113.0/24 → 192.0.2.0/24"]]);
+
+  // 403 pinned（没有 currentIp）和加白未生效都不改记录、不推送
+  r = await run({ argument, responses: [PINNED], store });
+  assert.equal(r.notes.length, 0);
+  r = await run({ argument, responses: [okWith({ currentIp: "198.51.100.4", whitelist: [{ ip: "192.0.2.0/24", slot: 0 }] })], store });
+  assert.equal(store.po0fw_last, "192.0.2.0/24");
+  assert.equal(r.notes.filter((n) => /已加白|出口网段/.test(n[1])).length, 0);
+
+  // 关掉再打开：重新从第一次算
+  await run({ argument: "tokens=pgnfw_abc@0", responses: [okWith(moved)], store });
+  r = await run({ argument, responses: [okWith(moved)], store });
+  assert.deepEqual(r.notes, [["po0 防火墙加白", "已加白 · 槽位 0", "192.0.2.0/24"]]);
 });
 
 test("多 token；部分失败；未配置 token 只通知一次", async () => {
