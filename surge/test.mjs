@@ -49,6 +49,7 @@ const OK = {
 };
 const PINNED = { status: 403, body: { code: 403, message: "IP is already pinned to another slot." } };
 const BAD = { status: 400, body: { code: 400, message: "serviceId is required" } };
+const NAME = "🛡️ po0 防火墙加白";
 const RED = "exclamationmark.shield";
 const GREEN = "checkmark.shield";
 
@@ -98,13 +99,13 @@ test("400 不重试，失败只通知一次，换措辞不再通知，恢复再�
   let r = await run({ argument: "tokens=pgnfw_bad", responses: [BAD], store });
   assert.equal(r.calls.length, 1);
   assert.match(r.out.content, /serviceId is required/);
-  assert.equal(r.notes.length, 1);
+  assert.deepEqual(r.notes, [[NAME, "🚨 加白失败", "❌ HTTP 400 serviceId is required"]]);
   r = await run({ argument: "tokens=pgnfw_bad", responses: [BAD], store });
   assert.equal(r.notes.length, 0);
   r = await run({ argument: "tokens=pgnfw_bad", responses: [{ status: 400, body: { message: "other" } }], store });
   assert.equal(r.notes.length, 0);
   r = await run({ argument: "tokens=pgnfw_bad", responses: [OK], store });
-  assert.equal(r.notes[0][1], "已恢复");
+  assert.deepEqual(r.notes, [[NAME, "🎉 已恢复", "✅ 已加白\n🌐 出口 203.0.113.0/24"]]);
 });
 
 test("暂时性错误面板显示失败，但不改状态、不通知", async () => {
@@ -140,11 +141,11 @@ test("notify_update=1：第一次成功推送当前网段，变化推送旧 → 
   const argument = "tokens=pgnfw_abc@0&notify_update=1";
   const moved = { currentIp: "192.0.2.7", whitelist: [{ ip: "192.0.2.0/24", slot: 0 }] };
   let r = await run({ argument, responses: [OK], store });
-  assert.deepEqual(r.notes, [["po0 防火墙加白", "已加白 · 槽位 0", "203.0.113.0/24"]]);
+  assert.deepEqual(r.notes, [[NAME, "✅ 已加白 · 📌 槽位 0", "🌐 出口网段 203.0.113.0/24"]]);
   r = await run({ argument, responses: [OK], store });
   assert.equal(r.notes.length, 0);
   r = await run({ argument, responses: [okWith(moved)], store });
-  assert.deepEqual(r.notes, [["po0 防火墙加白", "出口网段已更新 · 槽位 0", "203.0.113.0/24 → 192.0.2.0/24"]]);
+  assert.deepEqual(r.notes, [[NAME, "🔄 出口网段已更新 · 📌 槽位 0", "🌐 203.0.113.0/24 → 192.0.2.0/24"]]);
 
   // 403 pinned（没有 currentIp）和加白未生效都不改记录、不推送
   r = await run({ argument, responses: [PINNED], store });
@@ -156,19 +157,22 @@ test("notify_update=1：第一次成功推送当前网段，变化推送旧 → 
   // 关掉再打开：重新从第一次算
   await run({ argument: "tokens=pgnfw_abc@0", responses: [okWith(moved)], store });
   r = await run({ argument, responses: [okWith(moved)], store });
-  assert.deepEqual(r.notes, [["po0 防火墙加白", "已加白 · 槽位 0", "192.0.2.0/24"]]);
+  assert.deepEqual(r.notes, [[NAME, "✅ 已加白 · 📌 槽位 0", "🌐 出口网段 192.0.2.0/24"]]);
 });
 
 test("多 token；部分失败；未配置 token 只通知一次", async () => {
   let r = await run({ argument: "tokens=pgnfw_a@0,pgnfw_b", responses: [OK, OK] });
   assert.equal(r.calls[1].url, "https://124.221.69.228/api/firewall/pgnfw_b/add");
   assert.equal(r.out.title, "po0 加白 2/2 · 出口 203.0.113.0/24");
-  r = await run({ argument: "tokens=pgnfw_a,pgnfw_b", responses: [OK, BAD] });
+  r = await run({ argument: "tokens=pgnfw_a@0,pgnfw_b", responses: [OK, BAD] });
   assert.equal(r.store.po0fw_state, "ok,fail");
+  assert.deepEqual(r.notes, [
+    [NAME, "🚨 1/2 个 token 加白失败", "#1 📌0 ✅ 已加白\n#2 ❌ HTTP 400 serviceId is required\n🌐 出口 203.0.113.0/24"],
+  ]);
   assert.equal(r.out.title, "po0 加白 1/2 · 出口 203.0.113.0/24");
   const store = {};
   r = await run({ argument: "tokens=", store });
-  assert.equal(r.notes.length, 1);
+  assert.deepEqual(r.notes, [[NAME, "⚠️ 未配置 token", "在模块参数 tokens 里填入 pgnfw_ token"]]);
   r = await run({ argument: "tokens=", store });
   assert.equal(r.notes.length, 0);
 });
@@ -193,6 +197,7 @@ test("异常走 catch，仍然调用 $done", async () => {
   const r = await run({ argument: "tokens=pgnfw_s3cret", responses: [{ throw: "boom pgnfw_s3cret" }] });
   assert.equal(r.out.icon, RED);
   assert.match(r.out.content, /boom pgnfw_\*\*\*/);
+  assert.deepEqual(r.notes, [[NAME, "💥 脚本出错", "boom pgnfw_***"]]);
 });
 
 test("enabled:false 先于 whitelist 检查", async () => {

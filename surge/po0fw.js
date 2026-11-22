@@ -19,7 +19,7 @@ var API = "https://124.221.69.228/api/firewall/";
 var RETRY_DELAYS = [3, 8]; // 秒。网络错误和 HTTP 5xx 重试，network-changed 触发时网络可能还没就绪
 var STATE_KEY = "po0fw_state";
 var LAST_KEY = "po0fw_last"; // notify_update 打开时，上次推送过的出口 /24
-var NAME = "po0 防火墙加白";
+var NAME = "🛡️ po0 防火墙加白"; // 推送标题
 
 function parseArgs(arg) {
   var out = {};
@@ -149,6 +149,13 @@ function describe(item, res, i) {
   return head + "✅ " + res.whitelist.length + "/" + res.limit + "\n" + lines.join("\n");
 }
 
+// 推送正文里每个 token 一行；只有一个 token 时不写序号
+function brief(item, res, i, multi) {
+  var head = (multi ? "#" + (i + 1) + " " : "") + (item.slot === null ? "" : "📌" + item.slot + " ");
+  if (!res.ok) return head + "❌ " + redact(res.error);
+  return head + (res.conflict ? "✅ 本机网段已在其他槽位" : "✅ 已加白");
+}
+
 function isBad(state) {
   return state === "no-token" || /(^|,)fail(,|$)/.test(state || "");
 }
@@ -156,12 +163,13 @@ function isBad(state) {
 // state：每个 token 一项 ok/fail（暂时性错误沿用上次的值，没有上次记 ?），或 no-token。
 // 只在 state 变化时通知：变成有失败时通知失败；从失败恢复到全部 ok 时通知「已恢复」。
 // 首次成功、错误措辞变化都不通知；出口网段由 noteExit 按 notify_update 处理。
-function finish(allOk, state, title, content) {
+// bad / good：推送的 [副标题, 正文]，分别用于失败和恢复。
+function finish(allOk, state, title, content, bad, good) {
   var prev = $persistentStore.read(STATE_KEY);
   if (state !== prev) {
     $persistentStore.write(state, STATE_KEY);
-    if (isBad(state)) $notification.post(NAME, title, content);
-    else if (isBad(prev) && state.indexOf("?") < 0) $notification.post(NAME, "已恢复", title);
+    if (isBad(state)) $notification.post(NAME, bad[0], bad[1]);
+    else if (isBad(prev) && state.indexOf("?") < 0) $notification.post(NAME, good[0], good[1]);
   }
   $done({
     title: title,
@@ -181,9 +189,9 @@ function noteExit(net, slots) {
   }
   if (!net || net === last) return;
   $persistentStore.write(net, LAST_KEY);
-  var where = slots.length ? " · 槽位 " + slots.join(",") : "";
-  if (last) $notification.post(NAME, "出口网段已更新" + where, last + " → " + net);
-  else $notification.post(NAME, "已加白" + where, net);
+  var where = slots.length ? " · 📌 槽位 " + slots.join(",") : "";
+  if (last) $notification.post(NAME, "🔄 出口网段已更新" + where, "🌐 " + last + " → " + net);
+  else $notification.post(NAME, "✅ 已加白" + where, "🌐 出口网段 " + net);
 }
 
 function run(items) {
@@ -200,6 +208,8 @@ function run(items) {
     var slots = [];
     var parts = [];
     var lines = [];
+    var notes = [];
+    var multi = items.length > 1;
     results.forEach(function (r, i) {
       if (r.ok) okCount++;
       if (r.currentIp) exitIp = r.currentIp;
@@ -209,10 +219,14 @@ function run(items) {
       }
       parts.push(r.ok ? "ok" : r.transient ? prevParts[i] || "?" : "fail");
       lines.push(describe(items[i], r, i));
+      notes.push(brief(items[i], r, i, multi));
     });
     noteExit(okNet, slots);
-    var title = "po0 加白 " + okCount + "/" + results.length + (exitIp ? " · 出口 " + exitIp : "");
-    finish(okCount === results.length, parts.join(","), title, lines.join("\n"));
+    var n = results.length;
+    var title = "po0 加白 " + okCount + "/" + n + (exitIp ? " · 出口 " + exitIp : "");
+    var body = notes.join("\n") + (exitIp ? "\n🌐 出口 " + exitIp : "");
+    var failTitle = multi ? "🚨 " + (n - okCount) + "/" + n + " 个 token 加白失败" : "🚨 加白失败";
+    finish(okCount === n, parts.join(","), title, lines.join("\n"), [failTitle, body], ["🎉 已恢复", body]);
   });
 }
 
@@ -236,9 +250,11 @@ if (ssid && skip.indexOf(ssid) >= 0) {
     "icon-color": "#8E8E93",
   });
 } else if (items.length === 0) {
-  finish(false, "no-token", "po0 加白：未配置 token", "在模块参数 tokens 里填入 pgnfw_ token");
+  var hint = "在模块参数 tokens 里填入 pgnfw_ token";
+  finish(false, "no-token", "po0 加白：未配置 token", hint, ["⚠️ 未配置 token", hint]);
 } else {
   run(items).catch(function (e) {
-    finish(false, "fail", "po0 加白：脚本出错", redact((e && e.message) || e));
+    var msg = redact((e && e.message) || e);
+    finish(false, "fail", "po0 加白：脚本出错", msg, ["💥 脚本出错", msg]);
   });
 }
