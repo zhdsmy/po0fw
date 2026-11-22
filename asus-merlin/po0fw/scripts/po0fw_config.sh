@@ -26,7 +26,8 @@ NOTIFY_ERR=/tmp/po0fw_notify.err
 BACKOFF_MIN=15
 NOTIFY_MAX=3                 # 变化通知连续失败这么多轮后放弃这次通知
 FAIL_MAX=3                   # 连续失败这么多轮时发一次失败通知
-TITLE="🛡️ po0 防火墙加白"   # 通知标题；正文第一行是带 emoji 的摘要，第二行是详情
+TITLE="🛡️ po0 防火墙加白"   # 通知标题
+ICON=https://raw.githubusercontent.com/zhdsmy/po0fw/main/asus-merlin/po0fw/res/icon-po0fw.png  # Bark 图标（iOS 15+）
 
 now() { TZ=UTC-8 date '+%Y-%m-%d %H:%M:%S'; }
 
@@ -65,21 +66,24 @@ cron_set() {
     [ "$po0fw_enable" = 1 ] && cru a po0fw "*/$(interval) * * * * $SELF run cron"
 }
 
-# 发送通知（Bark 或 Telegram，可走代理；加白请求本身不走代理）。
+# 发送通知（Bark 或 Telegram，可走代理；加白请求本身不走代理）。参数：摘要、详情。
+# Bark：摘要作副标题，详情作正文；Telegram：标题、摘要、详情各一行。
 # 通知关闭时直接成功；失败时在 stdout 输出原因（不含 key 和 bot token）。
 send() {
-    n_text=$1
+    n_head=$1 n_body=$2
     set -- -sS -m 10 -w '\n%{http_code}' -X POST
     [ -n "$po0fw_proxy" ] && set -- "$@" -x "$po0fw_proxy"
     case "$po0fw_notify" in
         bark)
             n_out=$(curl "$@" "${po0fw_bark_url%/}" --data-urlencode "title=$TITLE" \
-                --data-urlencode "body=$n_text" --data-urlencode "group=po0fw" 2>"$NOTIFY_ERR")
+                --data-urlencode "subtitle=$n_head" --data-urlencode "body=$n_body" \
+                --data-urlencode "icon=$ICON" --data-urlencode "group=po0fw" 2>"$NOTIFY_ERR")
             ;;
         telegram)
             n_out=$(curl "$@" "${po0fw_tg_api:-https://api.telegram.org}/bot$po0fw_tg_token/sendMessage" \
                 --data-urlencode "chat_id=$po0fw_tg_chat" --data-urlencode "text=$TITLE
-$n_text" 2>"$NOTIFY_ERR")
+$n_head
+$n_body" 2>"$NOTIFY_ERR")
             ;;
         *) return 0;;
     esac
@@ -167,8 +171,7 @@ update() {
         return 0
     fi
     # 首次记录不通知。通知失败时不更新记录，下一轮重试；连续失败 NOTIFY_MAX 轮后放弃这次通知
-    if [ -n "$old" ] && ! err=$(send "🔄 出口网段已更新 · 📌 槽位 $slot
-🌐 $old → $new"); then
+    if [ -n "$old" ] && ! err=$(send "🔄 出口网段已更新 · 📌 槽位 $slot" "🌐 $old → $new"); then
         fails=$((${po0fw_notify_fail:-0} + 1))
         if [ "$fails" -lt "$NOTIFY_MAX" ]; then
             dbus set po0fw_notify_fail="$fails"
@@ -192,15 +195,13 @@ alert() {
             dbus remove po0fw_fail_count
             [ "$po0fw_fail_alerted" = 1 ] || return 0
             dbus remove po0fw_fail_alerted
-            err=$(send "🎉 已恢复
-$(last_status)") || log "恢复通知发送失败 $(short "$err")"
+            err=$(send "🎉 已恢复" "$(last_status)") || log "恢复通知发送失败 $(short "$err")"
             ;;
         1)
             n=$((${po0fw_fail_count:-0} + 1))
             dbus set po0fw_fail_count="$n"
             [ "$n" -ge "$FAIL_MAX" ] && [ "$po0fw_fail_alerted" != 1 ] || return 0
-            if err=$(send "🚨 连续 $n 次加白失败
-$(last_status)"); then
+            if err=$(send "🚨 连续 $n 次加白失败" "$(last_status)"); then
                 dbus set po0fw_fail_alerted=1
             elif [ "$n" = "$FAIL_MAX" ]; then
                 log "失败通知发送失败，之后每轮重试 $(short "$err")"
@@ -226,8 +227,9 @@ case "$1" in
     notify-test)
         case "$po0fw_notify" in
             bark|telegram)
-                if err=$(send "🔔 测试通知
-$(last_status)"); then log "测试通知已发送（$po0fw_notify）"
+                # 还没运行过时没有状态，正文不能为空
+                st=$(last_status)
+                if err=$(send "🔔 测试通知" "${st:-还没有运行记录}"); then log "测试通知已发送（$po0fw_notify）"
                 else log "测试通知发送失败（$po0fw_notify）$(short "$err")"; fi;;
             *) log "测试通知：没有选择通知渠道";;
         esac

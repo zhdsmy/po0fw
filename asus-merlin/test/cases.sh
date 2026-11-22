@@ -77,7 +77,7 @@ ok no-eval '[ ! -e /state/pwned ] && [ ! -e /state/pwned2 ] && st | grep -q 未�
 
 # ---- 变化通知
 t $HOME_C24; slot1 $NEW_C24; set_db po0fw_notify_fail=2
-$S run cron; ok bark-sent '[ "$(last)" = $NEW_C24 ] && [ -z "$(db notify_fail)" ] && grep -q "https://bark.example/BARKKEY" /state/notify.log && grep -q "title=🛡️ po0 防火墙加白 --data-urlencode body=🔄 出口网段已更新 · 📌 槽位 1|🌐 $HOME_C24 → $NEW_C24 " /state/notify.log && grep -q "group=po0fw" /state/notify.log && ! grep -q -- " -x " /state/notify.log'
+$S run cron; ok bark-sent '[ "$(last)" = $NEW_C24 ] && [ -z "$(db notify_fail)" ] && grep -q "https://bark.example/BARKKEY" /state/notify.log && grep -q "title=🛡️ po0 防火墙加白 --data-urlencode subtitle=🔄 出口网段已更新 · 📌 槽位 1 --data-urlencode body=🌐 $HOME_C24 → $NEW_C24 --data-urlencode icon=https://raw.githubusercontent.com/zhdsmy/po0fw/main/asus-merlin/po0fw/res/icon-po0fw.png " /state/notify.log && grep -q "group=po0fw" /state/notify.log && ! grep -q -- " -x " /state/notify.log'
 t $HOME_C24; slot1 $NEW_C24; set_db po0fw_bark_url=https://bark.example/BARKKEY/
 $S run cron; ok bark-trailing-slash 'grep -q "POST https://bark.example/BARKKEY --data" /state/notify.log'
 
@@ -97,9 +97,9 @@ $S run cron; ok notify-off '[ "$(last)" = $NEW_C24 ] && [ "$(notes)" = 0 ]'
 # ---- 失败通知与恢复
 t $HOME_C24; resp 1 400 '{"code":400,"message":"serviceId is required"}'
 $S run cron; $S run cron; ok fail-2-quiet '[ "$(db fail_count)" = 2 ] && [ "$(notes)" = 0 ]'
-$S run cron; ok fail-3-alert '[ "$(notes)" = 1 ] && grep -q "body=🚨 连续 3 次加白失败|❌ HTTP 400" /state/notify.log && [ "$(db fail_alerted)" = 1 ]'
+$S run cron; ok fail-3-alert '[ "$(notes)" = 1 ] && grep -q "subtitle=🚨 连续 3 次加白失败 --data-urlencode body=❌ HTTP 400" /state/notify.log && [ "$(db fail_alerted)" = 1 ]'
 $S run cron; ok fail-4-quiet '[ "$(notes)" = 1 ] && [ "$(db fail_count)" = 4 ]'
-slot1 $HOME_C24 5; $S run cron; ok recovered '[ "$(notes)" = 2 ] && grep -q "body=🎉 已恢复|✅ 槽位 1" /state/notify.log && [ -z "$(db fail_count)" ] && [ -z "$(db fail_alerted)" ]'
+slot1 $HOME_C24 5; $S run cron; ok recovered '[ "$(notes)" = 2 ] && grep -q "subtitle=🎉 已恢复 --data-urlencode body=✅ 槽位 1" /state/notify.log && [ -z "$(db fail_count)" ] && [ -z "$(db fail_alerted)" ]'
 
 t $HOME_C24; resp 1 400 '{}'; echo 000 >/state/notify_code
 $S run cron; $S run cron; $S run cron; $S run cron
@@ -111,8 +111,8 @@ $S run cron; ok short-failure-quiet '[ "$(notes)" = 0 ] && [ -z "$(db fail_count
 
 # ---- 测试通知、并发、网页和启动参数
 t $HOME_C24; slot1 $HOME_C24; $S run cron; $S notify-test
-ok notify-test 'grep -q "body=🔔 测试通知|✅ 槽位 1" /state/notify.log && grep -q "测试通知已发送（bark）" /tmp/upload/po0fw_log.txt'
-t; echo 000 >/state/notify_code; $S notify-test; ok notify-test-fail 'grep -q "测试通知发送失败（bark）curl: (7)" /tmp/upload/po0fw_log.txt'
+ok notify-test 'grep -q "subtitle=🔔 测试通知 --data-urlencode body=✅ 槽位 1" /state/notify.log && grep -q "测试通知已发送（bark）" /tmp/upload/po0fw_log.txt'
+t; echo 000 >/state/notify_code; $S notify-test; ok notify-test-fail 'grep -q "测试通知发送失败（bark）curl: (7)" /tmp/upload/po0fw_log.txt && grep -q "body=还没有运行记录 " /state/notify.log'
 t; set_db po0fw_notify=off; $S notify-test; ok notify-test-off 'grep -q "没有选择通知渠道" /tmp/upload/po0fw_log.txt && [ "$(notes)" = 0 ]'
 
 t $HOME_C24; echo 1 >/state/real_sleep; echo 2 >/state/curl_sleep; slot1 $HOME_C24
