@@ -130,7 +130,7 @@ export function App() {
         <div className="flex flex-wrap gap-2">
           {actions.map(([id, label]) => <Button key={id} variant={id === 1 ? "primary" : "secondary"}
             disabled={initializing || running !== null || (!loaded && (id === 1 || id === 4))}
-            loading={running === id} onClick={() => run(id)}>{label}</Button>)}
+            loading={running === id} aria-busy={running === id} aria-label={label} onClick={() => run(id)}>{label}</Button>)}
         </div>
       </section>
 

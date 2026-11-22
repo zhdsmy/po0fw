@@ -1,27 +1,11 @@
 import assert from "node:assert/strict";
-import { once } from "node:events";
 import { test } from "node:test";
-import { chromium } from "playwright-core";
-import { createPreviewServer } from "../preview/server.mjs";
+import { openPreview, ready, shot } from "./fixture.mjs";
 
 test("Kumo controls, focus and popup stay in the dark shadow tree", async (t) => {
-  const server = createPreviewServer();
-  server.listen(0, "127.0.0.1");
-  await once(server, "listening");
-  t.after(() => new Promise((resolve) => server.close(resolve)));
-  const origin = `http://127.0.0.1:${server.address().port}`;
-  const browser = await chromium.launch();
-  t.after(() => browser.close());
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, colorScheme: "light" });
-  page.setDefaultTimeout(5000);
-  const errors = [];
-  const external = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  page.on("request", (req) => {
-    if (new URL(req.url()).origin !== origin) external.push(req.url());
-  });
-
-  await page.goto(`${origin}/Module_po0fw.asp`);
+  const { page, url } = await openPreview(t);
+  await page.goto(url);
+  await ready(page);
   const input = page.getByLabel("API token", { exact: true });
   await input.fill("pgnfw_TESTtoken123");
   assert.equal(await input.getAttribute("type"), "password");
@@ -53,9 +37,7 @@ test("Kumo controls, focus and popup stay in the dark shadow tree", async (t) =>
   await page.keyboard.press("ArrowDown");
   const highlighted = list.getByRole("option", { name: "10 分钟" });
   assert.equal(await highlighted.evaluate((el) => el.matches(":focus-visible")), true);
-  if (process.env.PO0FW_MOUNT_SHOT) {
-    await page.screenshot({ path: process.env.PO0FW_MOUNT_SHOT, animations: "disabled" });
-  }
+  await shot(page, "select-open-1280");
   await page.keyboard.press("Enter");
   assert.equal((await trigger.innerText()).trim(), "10 分钟");
 
@@ -66,6 +48,4 @@ test("Kumo controls, focus and popup stay in the dark shadow tree", async (t) =>
   await list.waitFor({ state: "hidden" });
   await page.getByRole("button", { name: "返回软件中心" }).click();
   assert.equal(new URL(page.url()).pathname, "/Module_Softcenter.asp");
-  assert.deepEqual(errors, []);
-  assert.deepEqual(external, []);
 });

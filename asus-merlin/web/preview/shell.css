@@ -11,3 +11,13 @@ body { margin: 0; background: Canvas; color: CanvasText; }
 #subMenu { background: ButtonFace; border-inline-start: 3px solid GrayText; }
 #tabMenu { font-weight: bold; }
 #footer { padding-block: 12px; border-top: 1px solid GrayText; text-align: center; }
+
+/* Minimal equivalents of the firmware form classes used by the old ASP. */
+.FormTitle { color: CanvasText; border-spacing: 0; }
+.formfonttitle { font-size: 18px; font-weight: bold; }
+.splitLine { border-top: 1px solid GrayText; }
+.SimpleNote { line-height: 1.5; margin-block: 8px; }
+.FormTable th { text-align: start; }
+.FormTable th, .FormTable td { border-bottom: 1px solid GrayText; }
+.soft_setting_log1 { box-sizing: border-box; width: 100%; }
+.apply_gen { text-align: center; margin-block: 8px; }

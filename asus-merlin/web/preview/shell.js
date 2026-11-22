@@ -1,4 +1,5 @@
 // Only the ASUS shell globals used by Module_po0fw.asp.
+function E(id) { return document.getElementById(id); }
 var tabtitle = [[]];
 var tablink = [[]];
 function show_menu(hook) {
