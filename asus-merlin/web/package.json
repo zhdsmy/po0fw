@@ -1,0 +1,27 @@
+{
+  "name": "po0fw-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "preview": "node preview/server.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:mount": "node --test test/mount.test.mjs"
+  },
+  "dependencies": {
+    "@cloudflare/kumo": "2.19.0",
+    "@phosphor-icons/react": "2.1.10",
+    "react": "19.2.9",
+    "react-dom": "19.2.9"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.5",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "esbuild": "0.28.2",
+    "playwright-core": "1.65.1",
+    "postcss": "8.5.33",
+    "tailwindcss": "4.3.5",
+    "typescript": "7.0.2"
+  }
+}

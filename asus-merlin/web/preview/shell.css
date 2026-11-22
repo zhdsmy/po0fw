@@ -1,0 +1,13 @@
+/* Stand-ins for ASUS chrome. Only loaded by the loopback preview server. */
+:root { color-scheme: dark; font: 14px Arial, system-ui, sans-serif; }
+body { margin: 0; background: Canvas; color: CanvasText; }
+#TopBanner, .content, #footer { width: min(100%, 1000px); margin-inline: auto; }
+#TopBanner { display: flex; align-items: center; gap: 16px; height: 70px; border-bottom: 1px solid GrayText; }
+#TopBanner b { font-size: 26px; font-style: italic; }
+#TopBanner span, #footer { color: GrayText; }
+.content { min-height: 540px; padding-top: 12px; }
+#mainMenu, #subMenu, #tabMenu { padding: 12px 14px; }
+#mainMenu, #subMenu { margin-right: 12px; }
+#subMenu { background: ButtonFace; border-inline-start: 3px solid GrayText; }
+#tabMenu { font-weight: bold; }
+#footer { padding-block: 12px; border-top: 1px solid GrayText; text-align: center; }

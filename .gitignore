@@ -1,1 +1,4 @@
 dist/
+/asus-merlin/web/node_modules/
+/asus-merlin/po0fw/res/po0fw-app.js
+/asus-merlin/po0fw/res/po0fw-app.css

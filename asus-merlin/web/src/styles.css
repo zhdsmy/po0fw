@@ -1,0 +1,16 @@
+@import "tailwindcss" source(none);
+@import "@cloudflare/kumo/styles/tailwind";
+@source "./**/*.tsx";
+
+:host {
+  display: block;
+  width: 100%;
+  max-width: 760px;
+  color-scheme: dark;
+  font: var(--text-base)/1.5 ui-sans-serif, system-ui, sans-serif;
+  text-align: start;
+}
+
+[data-theme="kumo"] {
+  isolation: isolate;
+}
