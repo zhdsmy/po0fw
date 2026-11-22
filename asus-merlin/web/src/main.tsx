@@ -7,7 +7,7 @@ const shadow = host.attachShadow({ mode: "open" });
 const stylesheet = document.createElement("link");
 stylesheet.rel = "stylesheet";
 const script = document.currentScript as HTMLScriptElement;
-stylesheet.href = "/res/po0fw-app.css" + new URL(script.src).search;
+stylesheet.href = script.src.replace(/\.js$/, ".css");
 
 const theme = document.createElement("div");
 theme.dataset.theme = "kumo";

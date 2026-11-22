@@ -18,7 +18,7 @@
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/popup.js"></script>
 <script language="JavaScript" type="text/javascript" src="/res/softcenter.js"></script>
-<script defer src="/res/po0fw-app.js?v=__PO0FW_ASSETS__"></script>
+<script defer src="/res/po0fw-app.__PO0FW_ASSETS__.js"></script>
 <script>
 function init() {
 	show_menu(menu_hook);

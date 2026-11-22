@@ -76,4 +76,6 @@ npm test               # 在另一个终端运行，自动启动隔离的 mock
 ```
 
 预览使用本地 ASUS 外框桩、假配置和内存接口。测试需要 Playwright 对应的 Chromium，可用 `npx playwright-core install chromium` 安装。
-构建将 JS/CSS 写入 `po0fw/res/`，并把两者的内容摘要填入 `web/dist/Module_po0fw.asp`。打包脚本和预览使用同一份生成页，Shadow DOM 的 CSS 沿用脚本的缓存键。路由器只需提供静态文件。
+构建将 JS 和 CSS 的联合内容摘要写入两个文件名，并在 `web/dist/Module_po0fw.asp` 引用相应脚本。打包与预览共用生成页和 `po0fw/res/` 中的资源。Shadow DOM 加载同名的 CSS，两条路径均不带查询串。覆盖安装切换页面后会删除旧版资源。
+
+在仓库根目录运行 `asus-merlin/build.sh` 后，执行 `sh asus-merlin/web/test/install-upgrade.sh` 可在断网 BusyBox 1.25 容器中复测覆盖安装与卸载。

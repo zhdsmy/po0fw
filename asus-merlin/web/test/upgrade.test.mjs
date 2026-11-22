@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { appendFile, copyFile, cp, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { appendFile, copyFile, cp, mkdir, mkdtemp, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -9,7 +9,7 @@ import { button, choose, openPreview, ready, shot } from "./fixture.mjs";
 
 const web = fileURLToPath(new URL("../", import.meta.url));
 const plugin = new URL("../../po0fw/", import.meta.url);
-const assetNames = ["po0fw-app.js", "po0fw-app.css"];
+const bundleName = /^po0fw-app\.[a-f0-9]{20}\.(js|css)$/;
 // Immutable main at the start of the migration, also the 1.1.2 ASP.
 const baseline = "da300bd9c307044092652a4cb4dcebce8368e4e4";
 const oldPage = execFileSync("git", ["show", `${baseline}:asus-merlin/po0fw/webs/Module_po0fw.asp`], { cwd: web });
@@ -20,7 +20,7 @@ test("upgrade from the old ASP, then deploy CSS-only and JS-only changes at one 
   const dir = await mkdtemp(join(tmpdir(), "po0fw-cache-"));
   t.after(() => rm(dir, { recursive: true, force: true }));
   const pageFile = join(dir, "Module_po0fw.asp"), versionFile = join(dir, "version");
-  const resources = pathToFileURL(dir + "/");
+  const resources = pathToFileURL(join(dir, "installed-res") + "/");
   await writeFile(pageFile, oldPage);
   await writeFile(versionFile, oldVersion);
   const { page, server, url } = await openPreview(t, { pageFile, versionFile, resources });
@@ -65,11 +65,15 @@ test("upgrade from the old ASP, then deploy CSS-only and JS-only changes at one 
   await copyFile(new URL("version", plugin), versionFile);
 
   async function install(source, res) {
-    for (const name of assetNames) await copyFile(join(res, name), join(dir, name));
+    const names = (await readdir(res)).filter((name) => bundleName.test(name));
+    assert.equal(names.length, 2);
+    await rm(resources, { recursive: true, force: true });
+    await mkdir(resources);
+    for (const name of names) await copyFile(join(res, name), new URL(name, resources));
     await copyFile(join(source, "dist/Module_po0fw.asp"), pageFile);
   }
 
-  const revisions = [];
+  const scriptPaths = [];
   for (const step of ["old-test", "css-change", "js-change"]) {
     if (step === "css-change") await copyFile(join(web, "src/styles.css"), css);
     if (step === "js-change") {
@@ -83,20 +87,21 @@ test("upgrade from the old ASP, then deploy CSS-only and JS-only changes at one 
     await ready(page);
     const observed = await page.evaluate(() => {
       const host = document.getElementById("po0fw-app");
-      const script = document.querySelector('script[src*="po0fw-app.js"]');
+      const script = document.querySelector('script[src^="/res/po0fw-app."]');
       const css = host.shadowRoot.querySelector('link[rel="stylesheet"]');
       return {
-        revisions: [new URL(script.src).search, new URL(css.href).search],
+        paths: [script.getAttribute("src"), css.getAttribute("href")],
         priorScript: document.documentElement.dataset.priorPackage,
         priorStyle: getComputedStyle(host).getPropertyValue("--prior-style").trim(),
       };
     });
-    const [revision, cssRevision] = observed.revisions;
-    assert.match(revision, /^\?v=[a-f0-9]{20}$/);
-    assert.equal(revision, cssRevision);
-    assert.ok(!revisions.includes(revision));
-    revisions.push(revision);
-    assert.deepEqual(requests.slice(count), assetNames.map((name) => "/res/" + name + revision));
+    const [scriptPath, cssHref] = observed.paths;
+    assert.match(scriptPath, /^\/res\/po0fw-app\.[a-f0-9]{20}\.js$/);
+    const cssPath = scriptPath.replace(/\.js$/, ".css");
+    assert.equal(new URL(cssHref, url).href, new URL(cssPath, url).href);
+    assert.ok(!scriptPaths.includes(scriptPath));
+    scriptPaths.push(scriptPath);
+    assert.deepEqual(requests.slice(count), [scriptPath, cssPath]);
     assert.equal(observed.priorScript, step === "js-change" ? undefined : "yes");
     assert.equal(observed.priorStyle, step === "old-test" ? "yes" : "");
     assert.equal(await page.getByText("当前版本：1.2.0-test.1", { exact: true }).count(), 1);
@@ -106,12 +111,27 @@ test("upgrade from the old ASP, then deploy CSS-only and JS-only changes at one 
     await ready(page);
     assert.equal(requests.length, count + 2);
   }
+  // The router rejects query strings under /res/, including requests for existing files.
+  const activeJs = scriptPaths.at(-1);
+  for (const path of ["/res/icon-po0fw.png", activeJs, activeJs.replace(/\.js$/, ".css")]) {
+    assert.equal((await page.request.get(new URL(path, url).href)).status(), 200);
+    assert.equal((await page.request.get(new URL(path + "?v=probe", url).href)).status(), 404);
+  }
   await shot(page, "after-1280");
   assert.deepEqual(await footer(), oldFooter);
   for (const [index, selector] of chrome.entries()) {
     const after = await page.locator(selector).screenshot();
     assert.ok(before[index].equals(after), "ASUS mock chrome differs at " + selector);
   }
+  // Switching back to an installed build reuses its corresponding cached pair.
+  await install(scratchWeb, scratchRes);
+  const count = requests.length;
+  await navigate();
+  await ready(page);
+  assert.equal(await page.locator('script[src^="/res/po0fw-app."]').getAttribute("src"), scriptPaths[1]);
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.priorPackage), "yes");
+  assert.equal(requests.length, count);
+  assert.equal((await page.request.get(new URL(activeJs, url).href)).status(), 404);
 });
 
 test("the old and new pages issue the same four API requests on one mock", async (t) => {

@@ -7,12 +7,42 @@ for tool in curl flock cru; do
     which "$tool" >/dev/null 2>&1 || { echo_date "缺少 $tool，退出安装"; exit 1; }
 done
 
-# Install assets before exposing the page which references this build.
-for asset in po0fw-app.js po0fw-app.css; do
+# A concurrent package switch must finish before another installer prunes assets.
+exec 8>/tmp/po0fw_install.lock || exit 1
+flock 8 || exit 1
+
+# The software-center /res/ handler requires literal filenames (no query string).
+res=/koolshare/res
+page=/koolshare/webs/Module_po0fw.asp
+js=$(sed -n 's@.*src="/res/\(po0fw-app\.[0-9a-f]\{20\}\.js\)".*@\1@p' "$DIR/webs/Module_po0fw.asp")
+[ -n "$js" ] || { echo_date "安装页缺少资源文件名"; exit 1; }
+css=${js%.js}.css
+for asset in "$js" "$css"; do
     [ -s "$DIR/res/$asset" ] || { echo_date "安装包缺少 $asset"; exit 1; }
 done
-cp -f "$DIR/res/po0fw-app.js" "$DIR/res/po0fw-app.css" /koolshare/res/ || exit 1
-cp -f "$DIR/webs/Module_po0fw.asp" /koolshare/webs/Module_po0fw.asp || exit 1
+
+# Copy to sibling temporary files so the active ASP always sees complete assets.
+publish() {
+    tmp=${2%/*}/.po0fw-app.new
+    cp -f "$1" "$tmp" && mv -f "$tmp" "$2" && return 0
+    rm -f "$tmp"
+    return 1
+}
+if ! publish "$DIR/res/$js" "$res/$js" || ! publish "$DIR/res/$css" "$res/$css" ||
+   ! publish "$DIR/webs/Module_po0fw.asp" "$page"; then
+    if ! grep -Fq "src=\"/res/$js\"" "$page" 2>/dev/null; then
+        rm -f "$res/$js" "$res/$css"
+    fi
+    echo_date "网页资源安装失败"
+    exit 1
+fi
+# Retire the former fixed-name pair and any other build after the ASP switches.
+rm -f "$res/po0fw-app.js" "$res/po0fw-app.css" || exit 1
+for old in "$res"/po0fw-app.*.js "$res"/po0fw-app.*.css; do
+    case "${old##*/}" in "$js"|"$css") continue;; esac
+    echo "${old##*/}" | grep -Eq '^po0fw-app\.[0-9a-f]{20}\.(js|css)$' || continue
+    rm -f "$old" || exit 1
+done
 cp -f "$DIR/scripts/po0fw_config.sh" /koolshare/scripts/po0fw_config.sh
 cp -f "$DIR/uninstall.sh" /koolshare/scripts/uninstall_po0fw.sh
 cp -f "$DIR/res/icon-po0fw.png" /koolshare/res/icon-po0fw.png
@@ -37,6 +67,6 @@ dbus set softcenter_module_po0fw_description="把公网出口 /24 写入 po0 防
 dbus set softcenter_module_po0fw_version="$VERSION"
 
 # 覆盖安装时按现有设置重新注册定时任务
-/koolshare/scripts/po0fw_config.sh start >/dev/null 2>&1
+/koolshare/scripts/po0fw_config.sh start 8>&- >/dev/null 2>&1
 echo_date "po0fw $VERSION 安装完成"
 exit 0

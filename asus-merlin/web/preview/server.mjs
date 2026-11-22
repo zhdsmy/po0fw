@@ -22,8 +22,6 @@ export function createPreviewServer({
 } = {}) {
   const assets = new Map(files);
   for (const path of ["/", "/Module_po0fw.asp"]) assets.set(path, ["text/html", pageFile]);
-  assets.set("/res/po0fw-app.js", ["text/javascript", new URL("po0fw-app.js", resources)]);
-  assets.set("/res/po0fw-app.css", ["text/css", new URL("po0fw-app.css", resources)]);
   const settings = {
     po0fw_enable: "1", po0fw_token: "pgnfw_TESTtoken123", po0fw_interval: "5", po0fw_slot: "1",
     po0fw_notify: "off", po0fw_bark_url: "", po0fw_tg_token: "", po0fw_tg_chat: "",
@@ -40,6 +38,7 @@ export function createPreviewServer({
       res.end(content);
     };
     try {
+      if (path.startsWith("/res/") && req.url.includes("?")) return send("text/plain", "Not found", 404);
       if (req.method === "POST" && path === "/_api/") {
         const chunks = [];
         for await (const chunk of req) chunks.push(chunk);
@@ -72,10 +71,14 @@ export function createPreviewServer({
       if (path === "/images/backprev.png" || path === "/images/backprevclick.png") {
         return send("image/svg+xml", '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="color-scheme:dark"><path d="M15 5l-7 7 7 7" fill="none" stroke="CanvasText" stroke-width="2"/></svg>');
       }
+      const bundle = /^\/res\/(po0fw-app\.[0-9a-f]{20}\.(js|css))$/.exec(path);
+      if (bundle) {
+        const type = bundle[2] === "js" ? "text/javascript" : "text/css";
+        return send(type, await readFile(new URL(bundle[1], resources)), 200, "public, max-age=31536000, immutable");
+      }
       if (!assets.has(path)) return send("text/plain", "Not found", 404);
       const [type, file] = assets.get(path);
-      const cache = path.startsWith("/res/po0fw-app.") ? "public, max-age=31536000, immutable" : "no-store";
-      return send(type, await readFile(file), 200, cache);
+      return send(type, await readFile(file));
     } catch (error) {
       return send("text/plain", error.code === "ENOENT" ? "Run npm run build first" : "Invalid request",
         error.code === "ENOENT" ? 404 : 400);

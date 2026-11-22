@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { build, transform } from "esbuild";
@@ -51,18 +51,26 @@ for (const { extension, data, limit } of assets) {
   console.log(`po0fw-app.${extension}: ${data.length} bytes (gzip ${gzipSync(data).length})`);
   if (data.length > limit) throw new Error(`po0fw-app.${extension} exceeds ${limit} bytes`);
 }
-for (const { extension, data } of assets) {
-  await writeFile(`../po0fw/res/po0fw-app.${extension}`, data);
-}
-
 // A CSS-only rebuild must also invalidate the URL of the script that links it.
 const hash = createHash("sha256");
 for (const asset of assets) hash.update(asset.data);
 const revision = hash.digest("hex").slice(0, 20);
 const template = await readFile("../po0fw/webs/Module_po0fw.asp", "utf8");
 if (!template.includes("__PO0FW_ASSETS__")) throw new Error("Missing asset revision in ASP template");
+const resources = "../po0fw/res";
+const bundle = `po0fw-app.${revision}`;
+for (const { extension, data } of assets) {
+  await writeFile(`${resources}/${bundle}.${extension}`, data);
+}
 await mkdir("dist", { recursive: true });
 await writeFile("dist/Module_po0fw.asp", template.replace("__PO0FW_ASSETS__", revision));
+
+// Keep exactly this pair in the directory copied into the offline package.
+for (const name of await readdir(resources)) {
+  if (/^po0fw-app(?:\.[0-9a-f]{20})?\.(js|css)$/.test(name) && !name.startsWith(bundle + ".")) {
+    await unlink(`${resources}/${name}`);
+  }
+}
 
 console.log("Largest JS inputs (bytes in output):");
 for (const [path, input] of Object.entries(shippedModules).sort((a, b) => b[1].bytesInOutput - a[1].bytesInOutput).slice(0, 5)) {
