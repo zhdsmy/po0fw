@@ -26,7 +26,7 @@ NOTIFY_ERR=/tmp/po0fw_notify.err
 BACKOFF_MIN=15
 NOTIFY_MAX=3                 # 变化通知连续失败这么多轮后放弃这次通知
 FAIL_MAX=3                   # 连续失败这么多轮时发一次失败通知
-TITLE="po0 防火墙加白"
+TITLE="🛡️ po0 防火墙加白"   # 通知标题；正文第一行是带 emoji 的摘要，第二行是详情
 
 now() { TZ=UTC-8 date '+%Y-%m-%d %H:%M:%S'; }
 
@@ -167,7 +167,8 @@ update() {
         return 0
     fi
     # 首次记录不通知。通知失败时不更新记录，下一轮重试；连续失败 NOTIFY_MAX 轮后放弃这次通知
-    if [ -n "$old" ] && ! err=$(send "槽位 $slot 已更新：$old → $new"); then
+    if [ -n "$old" ] && ! err=$(send "🔄 出口网段已更新 · 📌 槽位 $slot
+🌐 $old → $new"); then
         fails=$((${po0fw_notify_fail:-0} + 1))
         if [ "$fails" -lt "$NOTIFY_MAX" ]; then
             dbus set po0fw_notify_fail="$fails"
@@ -191,13 +192,15 @@ alert() {
             dbus remove po0fw_fail_count
             [ "$po0fw_fail_alerted" = 1 ] || return 0
             dbus remove po0fw_fail_alerted
-            err=$(send "已恢复：$(last_status)") || log "恢复通知发送失败 $(short "$err")"
+            err=$(send "🎉 已恢复
+$(last_status)") || log "恢复通知发送失败 $(short "$err")"
             ;;
         1)
             n=$((${po0fw_fail_count:-0} + 1))
             dbus set po0fw_fail_count="$n"
             [ "$n" -ge "$FAIL_MAX" ] && [ "$po0fw_fail_alerted" != 1 ] || return 0
-            if err=$(send "连续 $n 次失败：$(last_status)"); then
+            if err=$(send "🚨 连续 $n 次加白失败
+$(last_status)"); then
                 dbus set po0fw_fail_alerted=1
             elif [ "$n" = "$FAIL_MAX" ]; then
                 log "失败通知发送失败，之后每轮重试 $(short "$err")"
@@ -223,7 +226,8 @@ case "$1" in
     notify-test)
         case "$po0fw_notify" in
             bark|telegram)
-                if err=$(send "测试通知：$(last_status)"); then log "测试通知已发送（$po0fw_notify）"
+                if err=$(send "🔔 测试通知
+$(last_status)"); then log "测试通知已发送（$po0fw_notify）"
                 else log "测试通知发送失败（$po0fw_notify）$(short "$err")"; fi;;
             *) log "测试通知：没有选择通知渠道";;
         esac

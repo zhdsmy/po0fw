@@ -1,6 +1,6 @@
 #!/bin/sh
 # 加白请求：依次返回 /state/resp.N（N 递增，用完后重复最后一个）；文件第一行是状态码，其余是 body。
-# 其他请求当作通知：参数记到 /state/notify.log，状态码取 /state/notify_code（默认 200）。
+# 其他请求当作通知：参数记到 /state/notify.log（每次一行，参数里的换行记成 |），状态码取 /state/notify_code（默认 200）。
 url=; skip=0
 for a in "$@"; do
     if [ "$skip" = 1 ]; then skip=0; continue; fi
@@ -18,7 +18,7 @@ case "$url" in
         code=$(head -n1 $f); sed 1d $f; printf '\n%s' "$code"
         ;;
     *)
-        echo "NOTIFY $*" >>/state/notify.log
+        printf '%s' "NOTIFY $*" | tr '\n' '|' >>/state/notify.log; echo >>/state/notify.log
         code=$(cat /state/notify_code 2>/dev/null || echo 200)
         if [ "$code" = 000 ]; then echo "curl: (7) Failed to connect to proxy port 7890" >&2; printf '\n000'
         else printf '{"ok":false,"description":"Bad Request: chat not found"}\n%s' "$code"; fi
