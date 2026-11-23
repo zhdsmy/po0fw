@@ -28,6 +28,15 @@ jobs:
           package-manager-cache: false
       - name: Build
         run: asus-merlin/build.sh
+      - name: Test
+        run: |
+          node --test surge/test.mjs
+          asus-merlin/test.sh
+          sh asus-merlin/web/test/install-upgrade.sh
+          cd asus-merlin/web
+          npm run typecheck
+          npx playwright-core install --with-deps chromium
+          npm test
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}

@@ -6,10 +6,10 @@ exec 8>/tmp/po0fw_install.lock || exit 1
 flock 8 || exit 1
 
 cru d po0fw >/dev/null 2>&1
-# 等正在运行的更新结束，避免它在删除之后重新写出状态文件和 dbus
-flock /tmp/po0fw_run.lock true
+# 持有运行锁直到卸载结束：正在运行的更新先结束；排队的更新拿到锁时脚本已删除，直接退出
+exec 7>/tmp/po0fw_run.lock && flock 7
 rm -f /koolshare/init.d/S99po0fw.sh
-rm -f /koolshare/scripts/po0fw_config.sh
+rm -f /koolshare/scripts/po0fw_config.sh /koolshare/scripts/.po0fw-app.new
 rm -f /koolshare/webs/Module_po0fw.asp /koolshare/webs/.po0fw-app.new || exit 1
 rm -f /koolshare/res/icon-po0fw.png /koolshare/res/po0fw-app.js /koolshare/res/po0fw-app.css /koolshare/res/.po0fw-app.new || exit 1
 for asset in /koolshare/res/po0fw-app.*.js /koolshare/res/po0fw-app.*.css; do

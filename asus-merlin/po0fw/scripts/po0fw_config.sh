@@ -108,6 +108,8 @@ update() {
     # 定时任务抢不到锁就跳过；wan-start 和网页等前一次运行结束
     exec 9>"$LOCK"
     if [ "$reason" = cron ]; then flock -n 9 || return 2; else flock 9; fi
+    # 卸载期间排队的更新拿到锁时脚本已删除，不再请求、不写状态和 dbus
+    [ -f "$SELF" ] || return 2
 
     case "$po0fw_token" in
         pgnfw_*) ;;
@@ -202,6 +204,8 @@ alert() {
             n=$((${po0fw_fail_count:-0} + 1))
             dbus set po0fw_fail_count="$n"
             [ "$n" -ge "$FAIL_MAX" ] && [ "$po0fw_fail_alerted" != 1 ] || return 0
+            # 通知关闭时不算发过失败通知，打开通知后下一轮失败照常通知
+            case "$po0fw_notify" in bark|telegram) ;; *) return 0;; esac
             if err=$(send "🚨 连续 $n 次加白失败" "$(last_status)"); then
                 dbus set po0fw_fail_alerted=1
             elif [ "$n" = "$FAIL_MAX" ]; then

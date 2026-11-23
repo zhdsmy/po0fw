@@ -22,9 +22,10 @@ for asset in "$js" "$css"; do
 done
 
 # Copy to sibling temporary files so the active ASP always sees complete assets.
+# Optional $3 sets the mode before the rename (scripts run from cron).
 publish() {
     tmp=${2%/*}/.po0fw-app.new
-    cp -f "$1" "$tmp" && mv -f "$tmp" "$2" && return 0
+    cp -f "$1" "$tmp" && { [ -z "$3" ] || chmod "$3" "$tmp"; } && mv -f "$tmp" "$2" && return 0
     rm -f "$tmp"
     return 1
 }
@@ -43,12 +44,13 @@ for old in "$res"/po0fw-app.*.js "$res"/po0fw-app.*.css; do
     echo "${old##*/}" | grep -Eq '^po0fw-app\.[0-9a-f]{20}\.(js|css)$' || continue
     rm -f "$old" || exit 1
 done
-cp -f "$DIR/scripts/po0fw_config.sh" /koolshare/scripts/po0fw_config.sh
-cp -f "$DIR/uninstall.sh" /koolshare/scripts/uninstall_po0fw.sh
-cp -f "$DIR/res/icon-po0fw.png" /koolshare/res/icon-po0fw.png
-chmod 755 /koolshare/scripts/po0fw_config.sh /koolshare/scripts/uninstall_po0fw.sh
+# 脚本同样先写临时文件再改名，定时任务不会读到写了一半的脚本
 # 软件中心在 wan-start 时以 start 参数调用 init.d/S*
-ln -sf /koolshare/scripts/po0fw_config.sh /koolshare/init.d/S99po0fw.sh
+publish "$DIR/scripts/po0fw_config.sh" /koolshare/scripts/po0fw_config.sh 755 &&
+    publish "$DIR/uninstall.sh" /koolshare/scripts/uninstall_po0fw.sh 755 &&
+    publish "$DIR/res/icon-po0fw.png" /koolshare/res/icon-po0fw.png &&
+    ln -sf /koolshare/scripts/po0fw_config.sh /koolshare/init.d/S99po0fw.sh ||
+    { echo_date "脚本安装失败"; exit 1; }
 
 # 只在首次安装时写默认值，覆盖安装保留用户设置
 [ -n "$(dbus get po0fw_slot)" ] || dbus set po0fw_slot=1

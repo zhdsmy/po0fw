@@ -87,14 +87,55 @@ check_build a
 rm /tmp/b/po0fw/res/po0fw-app.*.css
 if sh /tmp/b/po0fw/install.sh; then exit 1; fi
 check_build a
+# A failed script publish must fail the install and keep the running script whole.
+cat > /reject/mv <<'STUB'
+#!/bin/sh
+[ "$3" != /koolshare/scripts/po0fw_config.sh ] || exit 1
+exec /bin/mv "$@"
+STUB
+echo '# stale' >> /koolshare/scripts/po0fw_config.sh
+cp /koolshare/scripts/po0fw_config.sh /tmp/stale.sh
+dbus set po0fw_version=stale
+if PATH=/reject:$PATH sh /tmp/a/po0fw/install.sh; then exit 1; fi
+cmp /tmp/stale.sh /koolshare/scripts/po0fw_config.sh
+[ ! -e /koolshare/scripts/.po0fw-app.new ]
+[ "$(dbus get po0fw_version)" = stale ]
+sh /tmp/a/po0fw/install.sh
+check_build a
+cmp /tmp/a/po0fw/scripts/po0fw_config.sh /koolshare/scripts/po0fw_config.sh
+[ -x /koolshare/scripts/po0fw_config.sh ] && [ -x /koolshare/scripts/uninstall_po0fw.sh ]
 
-# Uninstall also removes historical leftovers from an interrupted older install.
+# An update queued behind a running one during uninstall must not write anything back.
+dbus set po0fw_token=pgnfw_TESTtoken123
+printf '%s\n' 200 '{"enabled":true,"whitelist":[{"ip":"203.0.113.0\\/24","slot":9}]}' > /state/resp.1
+echo 1 > /state/real_sleep
+echo 4 > /state/curl_sleep
+/koolshare/scripts/po0fw_config.sh run web & holder=$!
+/bin/busybox sleep 1
+/koolshare/scripts/po0fw_config.sh run web & waiter=$!
+/bin/busybox sleep 1
 touch "$res/po0fw-app.js" "$res/po0fw-app.css" "$res/po0fw-app.0123456789abcdef0123.js"
 touch "$res/.po0fw-app.new" /koolshare/webs/.po0fw-app.new
 sh /koolshare/scripts/uninstall_po0fw.sh
+wait "$holder"
+wait "$waiter" || [ $? = 2 ]
+[ -z "$(dbus list po0fw_)" ]
+[ ! -e /tmp/upload/po0fw_status.txt ]
+rm -f /state/real_sleep /state/curl_sleep
+# flock is not FIFO, so the waiter above may run before the uninstall. Replay the
+# other order: a process whose script is already gone acquires the lock afterwards.
+calls=$(cat /state/curl_n)
+dbus set po0fw_token=pgnfw_TESTtoken123
+if sh /tmp/a/po0fw/scripts/po0fw_config.sh run web; then exit 1; fi
+dbus remove po0fw_token
+[ "$(cat /state/curl_n)" = "$calls" ]
+[ -z "$(dbus list po0fw_)" ]
+[ ! -e /tmp/upload/po0fw_status.txt ]
+
+# Uninstall also removes historical leftovers from an interrupted older install.
 [ ! -e "$page" ]
 [ ! -e /koolshare/webs/.po0fw-app.new ]
 [ "$(ls -1A "$res" | sort)" = "$(printf '%s\n' po0fw-app.notes.css unrelated.js)" ]
 [ ! -e /state/used-command ]
-echo 'PASS 1.1.2 -> A -> B -> A -> A, failed switch, incomplete package, uninstall; unrelated files preserved'
+echo 'PASS 1.1.2 -> A -> B -> A -> A, failed switch, incomplete package, failed script publish, uninstall during queued update; unrelated files preserved'
 ASH

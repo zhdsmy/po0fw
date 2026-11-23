@@ -106,6 +106,11 @@ $S run cron; $S run cron; $S run cron; $S run cron
 ok alert-send-fail '[ "$(notes)" = 2 ] && [ -z "$(db fail_alerted)" ] && [ "$(grep -c 失败通知发送失败 /tmp/upload/po0fw_log.txt)" = 1 ]'
 slot1 $HOME_C24 5; rm /state/notify_code; $S run cron; ok no-recovery-without-alert '[ "$(notes)" = 2 ] && [ -z "$(db fail_count)" ]'
 
+t $HOME_C24; resp 1 400 '{}'; set_db po0fw_notify=off
+$S run cron; $S run cron; $S run cron; ok fail-notify-off '[ "$(db fail_count)" = 3 ] && [ -z "$(db fail_alerted)" ]'
+set_db po0fw_notify=bark; $S run cron
+ok fail-notify-enabled-later '[ "$(notes)" = 1 ] && grep -q "subtitle=🚨 连续 4 次加白失败" /state/notify.log && [ "$(db fail_alerted)" = 1 ]'
+
 t $HOME_C24; resp 1 400 '{}'; set_db po0fw_fail_count=1; $S run cron; slot1 $HOME_C24 2
 $S run cron; ok short-failure-quiet '[ "$(notes)" = 0 ] && [ -z "$(db fail_count)" ]'
 
