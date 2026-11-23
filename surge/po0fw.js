@@ -18,6 +18,7 @@
 var API = "https://124.221.69.228/api/firewall/";
 var RETRY_DELAYS = [3, 8]; // 秒。网络错误和 HTTP 5xx 重试，network-changed 触发时网络可能还没就绪
 var STATE_KEY = "po0fw_state";
+var SIG_KEY = "po0fw_tokens"; // po0fw_state 对应的 token 配置摘要
 var LAST_KEY = "po0fw_last"; // notify_update 打开时，上次推送过的出口 /24
 var NAME = "🛡️ po0 防火墙加白"; // 推送标题
 
@@ -46,6 +47,24 @@ function parseTokens(s) {
       var m = t.match(/^(pgnfw_[A-Za-z0-9_-]+)(?:@(\d+))?$/);
       return m ? { token: m[1], slot: m[2] === undefined ? null : Number(m[2]) } : { bad: true, slot: null };
     });
+}
+
+// token 配置的摘要，不存 token 原文。换 token、增删或调整顺序后摘要改变
+function sign(items) {
+  var s = items
+    .map(function (it) {
+      return it.bad ? "!" : it.token + "@" + it.slot;
+    })
+    .join(",");
+  var h = 5381;
+  for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+// 上次的 state。token 配置变了就当没有记录；旧版本没存摘要，按配置未变处理
+function readState() {
+  var sig = $persistentStore.read(SIG_KEY);
+  return sig && sig !== SIG ? null : $persistentStore.read(STATE_KEY);
 }
 
 function redact(s) {
@@ -165,12 +184,13 @@ function isBad(state) {
 // 首次成功、错误措辞变化都不通知；出口网段由 noteExit 按 notify_update 处理。
 // bad / good：推送的 [副标题, 正文]，分别用于失败和恢复。
 function finish(allOk, state, title, content, bad, good) {
-  var prev = $persistentStore.read(STATE_KEY);
+  var prev = readState();
   if (state !== prev) {
     $persistentStore.write(state, STATE_KEY);
     if (isBad(state)) $notification.post(NAME, bad[0], bad[1]);
     else if (isBad(prev) && state.indexOf("?") < 0) $notification.post(NAME, good[0], good[1]);
   }
+  if ($persistentStore.read(SIG_KEY) !== SIG) $persistentStore.write(SIG, SIG_KEY);
   $done({
     title: title,
     content: content,
@@ -195,7 +215,7 @@ function noteExit(net, slots) {
 }
 
 function run(items) {
-  var prev = $persistentStore.read(STATE_KEY);
+  var prev = readState();
   var prevParts = prev && prev !== "no-token" ? prev.split(",") : [];
   return Promise.all(
     items.map(function (item) {
@@ -232,6 +252,7 @@ function run(items) {
 
 var args = parseArgs(typeof $argument === "string" ? $argument : "");
 var items = parseTokens(args.tokens);
+var SIG = sign(items);
 var skip = String(args.skip_ssid || "")
   .split(",")
   .map(function (s) {

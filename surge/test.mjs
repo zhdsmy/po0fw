@@ -177,6 +177,34 @@ test("多 token；部分失败；未配置 token 只通知一次", async () => {
   assert.equal(r.notes.length, 0);
 });
 
+test("换 token、调整顺序后不沿用旧状态", async () => {
+  const store = {};
+  await run({ argument: "tokens=pgnfw_a,pgnfw_b", responses: [OK, BAD], store });
+  // 失败状态的形状相同，但换成了新 token：照常通知
+  let r = await run({ argument: "tokens=pgnfw_c,pgnfw_d", responses: [OK, BAD], store });
+  assert.equal(r.notes.length, 1);
+  r = await run({ argument: "tokens=pgnfw_c,pgnfw_d", responses: [OK, BAD], store });
+  assert.equal(r.notes.length, 0);
+  r = await run({ argument: "tokens=pgnfw_d,pgnfw_c", responses: [BAD, OK], store });
+  assert.equal(r.store.po0fw_state, "fail,ok");
+  assert.equal(r.notes.length, 1);
+  // 新 token 一开始就遇到暂时性错误，不沿用旧 token 的 fail，之后成功也没有「已恢复」
+  await run({ argument: "tokens=pgnfw_e", responses: [{ status: 429, body: {} }], store });
+  assert.equal(store.po0fw_state, "?");
+  r = await run({ argument: "tokens=pgnfw_e", responses: [OK], store });
+  assert.equal(r.notes.length, 0);
+  assert.doesNotMatch(JSON.stringify(store), /pgnfw_/);
+});
+
+test("旧版本没存摘要：按配置未变处理，升级后不重复通知", async () => {
+  const store = { po0fw_state: "fail" };
+  let r = await run({ argument: "tokens=pgnfw_a", responses: [BAD], store });
+  assert.equal(r.notes.length, 0);
+  assert.ok(store.po0fw_tokens);
+  r = await run({ argument: "tokens=pgnfw_a", responses: [OK], store });
+  assert.deepEqual(r.notes.map((n) => n[1]), ["🎉 已恢复"]);
+});
+
 test("格式错误的 token 显示为失败项，不发请求", async () => {
   const r = await run({ argument: "tokens=pgnfw_a@1,pgnfw_b@", responses: [OK] });
   assert.equal(r.calls.length, 1);
