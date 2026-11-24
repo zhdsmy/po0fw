@@ -4,10 +4,13 @@
 
 ## 安装
 
-1. 把 `po0fw.sgmodule` 和 `po0fw.js` 放入 Surge 配置目录（模块中的 `script-path` 为相对路径）。如果配置存放在 iCloud，可运行 `surge/deploy.sh`，该脚本仅在文件内容变化时覆盖这两个文件。
-2. 在 Surge 中启用「po0 防火墙加白」模块，并按下表填写参数。
-3. 确认参数未直接写入模块文件，否则下次覆盖更新时会丢失。可用 `cmp` 对比仓库中的 `po0fw.sgmodule` 与配置目录中的副本，两者应当一致。
-4. 若之前用过上游模块，请先停用，以免请求量翻倍。在 macOS 上可运行 `surge-cli script list | grep -i po0`，确认只保留了 `po0fw-cron`、`po0fw-event`、`po0fw-panel`。
+[![一键安装到 Surge](../docs/surge/badge.svg)](https://zhdsmy.github.io/po0fw/surge/)
+
+1. 在装有 Surge 的 iPhone、iPad 或 Mac 上点击上方按钮，页面会打开 Surge 并安装模块。Mac 需要 Surge 6.7.0 及以上。也可以在 Surge 中从 URL 安装模块，填入 `https://raw.githubusercontent.com/zhdsmy/po0fw/main/surge/po0fw.sgmodule`。
+2. 启用「po0 防火墙加白」模块，并按下表填写参数。参数保存在本机的模块实例中，模块更新后保留。
+3. 若之前用过上游模块或本仓库旧版的本地模块（`script-path=po0fw.js`），请先停用并删除，以免请求量翻倍。在 macOS 上可运行 `surge-cli script list | grep -i po0`，确认只保留了 `po0fw-cron`、`po0fw-event`、`po0fw-panel`。
+
+模块和脚本都从本仓库 `main` 分支的 raw 地址加载，安装和更新时需要能访问 `raw.githubusercontent.com`。Surge 默认每天检查一次脚本更新。
 
 ## 参数
 
@@ -54,4 +57,6 @@
 
 ## 开发
 
-修改脚本后运行 `node --test surge/test.mjs`。
+修改脚本后运行 `node --test surge/test.mjs`。推送到 `main` 后，设备在下次检查脚本更新时获取新版本；在 macOS 上可运行 `surge-cli external-resource update all` 立即更新。
+
+一键安装按钮链接到 GitHub Pages 上的中转页 `docs/surge/index.html`，它再跳转到 `surge:///install-module?url=<模块地址>`。GitHub 会过滤 README 中的 `surge://` 链接，所以不能直接链接。

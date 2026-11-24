@@ -8,7 +8,7 @@
 
 | 目录 | 方案 | 适用环境 | 快速开始 |
 |---|---|---|---|
-| [`surge/`](surge/) | Surge 模块 | iOS、macOS 上的 Surge | [安装](surge/README.md#安装) |
+| [`surge/`](surge/) | Surge 模块 | iOS、macOS 上的 Surge | [一键安装](https://zhdsmy.github.io/po0fw/surge/) · [安装说明](surge/README.md#安装) |
 | [`asus-merlin/`](asus-merlin/) | 软件中心插件（KoolShare / KoolCenter，ASUSWRT-Merlin） | 华硕路由器，目前仅测试过 hnd 平台 | [安装与升级](asus-merlin/README.md#安装与升级) |
 
 新增方案时，新建顶层目录并在上表补充一行。需要打包的方案，发布 tag 格式为 `<目录>/v<版本>`，见 `.github/workflows/release.yml`。

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="176" height="32" viewBox="0 0 176 32" role="img" aria-label="一键安装到 Surge">
+  <title>一键安装到 Surge</title>
+  <clipPath id="r"><rect width="176" height="32" rx="7"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="64" height="32" fill="#1f2328"/>
+    <rect x="64" width="112" height="32" fill="#0a84ff"/>
+  </g>
+  <g fill="#fff" font-family="-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="14" font-weight="600" text-anchor="middle">
+    <text x="32" y="21">Surge</text>
+    <text x="120" y="21">一键安装模块</text>
+  </g>
+</svg>
