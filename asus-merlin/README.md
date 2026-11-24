@@ -21,8 +21,6 @@
 3. 覆盖安装会保留现有设置。
 4. 从 1.0.x 升级时，旧版「Bark 通知」开关依赖外部中转服务，1.1.0 起去掉了这个开关。升级后通知渠道默认为「关闭」，需要重新选择并填写。
 
-发布新版本时先改 `po0fw/version`，提交到 `main` 后推送 tag `asus-merlin/v<版本>`，例如 `asus-merlin/v1.1.0`。GitHub Actions 会检查 tag 在 `main` 上且与版本号一致，然后构建安装包并上传到 Release。
-
 已在 RT-AX86U（KoolCenter，hnd 平台）上验证。`.valid` 目前只写了 `hnd`，其他平台没有测试过。
 
 ## 设置说明
