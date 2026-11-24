@@ -5,6 +5,7 @@
   "scripts": {
     "build": "node build.mjs",
     "preview": "node preview/server.mjs",
+    "screenshots": "node scripts/capture-screenshots.mjs",
     "typecheck": "tsc --noEmit",
     "test:mount": "node --test test/mount.test.mjs",
     "test": "node --test test/*.test.mjs"
