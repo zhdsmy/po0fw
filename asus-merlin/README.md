@@ -6,19 +6,18 @@
 
 ## 界面预览
 
-截图来自仓库预览服务的 mock 数据，不是实际路由器截图。地址使用文档保留网段，token、Bark key、Telegram token 和代理都是示例值。页面固定深色，只在 ASUSWRT 皮肤下测过。
+截图来自仓库预览服务的 mock 数据，不是实际路由器截图。地址使用文档保留网段，token、Bark key、Telegram token 和代理都是示例值。页面固定深色。
 
 | 场景 | 预览 |
 |---|---|
 | 桌面总览 | ![桌面总览](docs/images/desktop-overview.png) |
 | 桌面通知设置 | ![桌面通知设置](docs/images/desktop-notification.png) |
-| 窄屏总览 | ![窄屏总览](docs/images/mobile-overview.png) |
-| 窄屏 Telegram 设置 | ![窄屏 Telegram 设置](docs/images/mobile-notification.png) |
+| 桌面 Telegram 设置 | ![桌面 Telegram 设置](docs/images/desktop-telegram.png) |
 
 ## 安装与升级
 
-1. 在仓库根目录运行 `asus-merlin/build.sh`，生成 `dist/po0fw-<版本>.tar.gz`。
-2. 在软件中心选择「离线安装」，上传 `po0fw-<版本>.tar.gz`。
+1. 从 [GitHub Releases](https://github.com/zhdsmy/po0fw/releases) 下载 `po0fw-<版本>.tar.gz`。
+2. 在软件中心选择「离线安装」，上传下载的 `po0fw-<版本>.tar.gz`。
 3. 覆盖安装会保留现有设置。
 4. 从 1.0.x 升级时，旧版「Bark 通知」开关依赖外部中转服务，1.1.0 起去掉了这个开关。升级后通知渠道默认为「关闭」，需要重新选择并填写。
 
@@ -30,10 +29,10 @@
 
 ### 加白
 
-- 启用开关控制定时更新。
+- 启用开关同时控制定时任务和拨号成功（`wan-start`）后的立即更新。关闭后保存，状态显示「⏸ 已停用」。网页「立即更新」不受开关限制。
 - API token 填 `pgnfw_` 开头的 token，不要带 `@槽位`。
 - 固定槽位可选 0 到 9。换 IP 时只替换这个槽位。
-- 检查间隔可选 1、2、5、10、15 或 30 分钟。每次拨号成功也会立即更新。
+- 检查间隔可选 1、2、5、10、15 或 30 分钟。启用时每次拨号成功也会立即更新。
 
 ### 通知渠道
 
@@ -94,6 +93,8 @@ Bark key 和 Telegram Bot Token 以明文存在路由器的 dbus 里，API token
 asus-merlin/test.sh    # 在 busybox 1.25 容器里用 mock 跑 po0fw_config.sh 的回归用例（需要 docker）
 asus-merlin/build.sh   # 生成 dist/po0fw-<版本>.tar.gz
 ```
+
+发布新版本时先改 `po0fw/version`，提交到 `main` 后推送 tag `asus-merlin/v<版本>`，例如 `asus-merlin/v1.1.0`。GitHub Actions 会检查 tag 在 `main` 上且与版本号一致，然后构建安装包并上传到 Release。
 
 在仓库根目录运行 `asus-merlin/build.sh` 后，执行 `sh asus-merlin/web/test/install-upgrade.sh`，可在断网 BusyBox 1.25 容器中复测覆盖安装与卸载。
 

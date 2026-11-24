@@ -4,11 +4,10 @@ Surge 模块用于 iOS 和 macOS，把本机直连出口所在的 /24 加入白�
 
 ## 安装
 
-1. 跑测试：`node --test surge/test.mjs`。
-2. 把 `po0fw.sgmodule` 和 `po0fw.js` 放进 Surge 的配置目录。模块里的 `script-path` 是相对路径。配置放在 iCloud 时可以用 `surge/deploy.sh`，它只在内容变化时覆盖这两个文件。
-3. 在 Surge 里启用「po0 防火墙加白」模块，按下表填参数。
-4. 确认参数没有写进模块文件，否则下次覆盖会丢掉它。用 `cmp` 比较仓库里的 `po0fw.sgmodule` 和配置目录里的副本，应当一致。
-5. 用过上游模块的，停用它，避免请求量翻倍。在 macOS 上可以用 `surge-cli script list | grep -i po0` 确认只剩 `po0fw-cron`、`po0fw-event`、`po0fw-panel`。
+1. 把 `po0fw.sgmodule` 和 `po0fw.js` 放进 Surge 的配置目录。模块里的 `script-path` 是相对路径。配置放在 iCloud 时可以用 `surge/deploy.sh`，它只在内容变化时覆盖这两个文件。
+2. 在 Surge 里启用「po0 防火墙加白」模块，按下表填参数。
+3. 确认参数没有写进模块文件，否则下次覆盖会丢掉它。用 `cmp` 比较仓库里的 `po0fw.sgmodule` 和配置目录里的副本，应当一致。
+4. 用过上游模块的，停用它，避免请求量翻倍。在 macOS 上可以用 `surge-cli script list | grep -i po0` 确认只剩 `po0fw-cron`、`po0fw-event`、`po0fw-panel`。
 
 ## 参数
 
@@ -52,3 +51,7 @@ Surge 模块用于 iOS 和 macOS，把本机直连出口所在的 /24 加入白�
 手机填 `skip_ssid` 是为了避免家宽换 IP 后的竞态。如果手机在家先于路由器请求，新家宽网段会被钉进手机的槽位，路由器之后收到 403，家宽槽位留着旧网段。手机出门后它的槽位换成蜂窝网段，家里断连到路由器下一次运行为止。
 
 手机读不到 Wi-Fi 名时（Surge 没有定位权限）不会跳过。在家时面板没显示「已跳过」就检查这个权限。
+
+## 开发
+
+修改脚本后运行 `node --test surge/test.mjs`。
