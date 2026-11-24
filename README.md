@@ -39,6 +39,6 @@ API 不提供删除接口。token 位于 URL 路径中，会出现在请求日�
 ## 致谢与许可
 
 - Surge 模块参考 [reallinzc/po0fw](https://github.com/reallinzc/po0fw) 的做法重新编写。
-- 路由器插件网页沿用软件中心插件页的通用结构，包括页头、表单和 `/_api/` 提交方式。
+- 路由器插件网页沿用软件中心插件页的通用结构，包括 ASUS 页面外框和 `/_api/` 提交方式。
 
 本仓库以 [MIT](LICENSE) 许可发布。
