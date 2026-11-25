@@ -153,6 +153,7 @@ test("wide and narrow layouts, dark controls, slot board, notes and scrolled log
   for (const bay of await bays.all()) {
     assert.equal(await bay.evaluate((el) => el.scrollWidth <= el.clientWidth), true, "IP must not overflow its bay");
   }
+  await page.locator("header").getByText("运行中", { exact: true }).waitFor();
   await page.getByText("白名单已用 3/5", { exact: true }).waitFor();
   await page.getByText("槽位 1：198.51.100.0/24（未变化）", { exact: true }).waitFor();
   for (const width of [1024, 1280, 1440]) {
@@ -234,6 +235,8 @@ test("poll timeout, malformed JSON, HTTP failure and settings read failure", asy
   await page.route("**/_temp/po0fw_status.txt", (r) => r.fulfill({ status: 404 }));
   await page.reload();
   await page.getByText("设置读取失败，请刷新页面重试。").waitFor();
-  await page.getByText("尚未运行", { exact: true }).waitFor();
+  for (const area of [page.locator("header"), page.getByRole("region", { name: "运行状态" })]) {
+    await area.getByText("尚未运行", { exact: true }).waitFor();
+  }
   assert.equal(await button(page, "保存并应用").isDisabled(), true);
 });

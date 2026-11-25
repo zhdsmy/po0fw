@@ -25,6 +25,18 @@ const texts: Record<Tone, string> = {
   success: "", warning: "text-kumo-warning", danger: "text-kumo-danger", neutral: "",
 };
 
+// The header badge sums up the status line in the words Bifrost uses.
+// Neutral statuses are either "⏸ 已停用" or a paused HTTP 429 backoff.
+function badgeFor(status: { tone: Tone; text: string } | null) {
+  if (!status) return { variant: "secondary", label: "尚未运行" } as const;
+  switch (status.tone) {
+    case "success": return { variant: "success", label: "运行中" } as const;
+    case "warning": return { variant: "warning", label: "有警告" } as const;
+    case "danger": return { variant: "error", label: "出错" } as const;
+    case "neutral": return { variant: "secondary", label: /已停用/.test(status.text) ? "未启用" : "已暂停" } as const;
+  }
+}
+
 type SettingInputProps = {
   id: string; label: string; value: string; placeholder: string; description?: string;
   secret?: boolean; onChange: (value: string) => void;
@@ -157,6 +169,7 @@ export function App() {
 
   const status = output.statusAvailable && output.status ? parseStatus(output.status) : null;
   const log = parseLog(output.log);
+  const badge = badgeFor(status);
 
   return (
     <main className="@container rounded-xl border border-kumo-line bg-kumo-base text-kumo-default">
@@ -166,6 +179,7 @@ export function App() {
           <div className="grid gap-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-semibold text-kumo-strong">po0 防火墙加白</h1>
+              <Badge appearance="dot" variant={badge.variant}>{badge.label}</Badge>
               {settings.po0fw_version && <Badge variant="outline">{settings.po0fw_version}</Badge>}
             </div>
             <p className="text-sm text-kumo-subtle">把路由器公网出口所在的 /24 写进 po0 防火墙白名单的固定槽位。</p>
