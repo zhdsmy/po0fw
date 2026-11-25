@@ -180,7 +180,7 @@ export function App() {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-semibold text-kumo-strong">po0 防火墙加白</h1>
               <Badge appearance="dot" variant={badge.variant}>{badge.label}</Badge>
-              {settings.po0fw_version && <Badge variant="outline">{settings.po0fw_version}</Badge>}
+              {settings.po0fw_version && <Badge variant="outline" className="border-kumo-line">{settings.po0fw_version}</Badge>}
             </div>
             <p className="text-sm text-kumo-subtle">把路由器公网出口所在的 /24 写进 po0 防火墙白名单的固定槽位。</p>
           </div>
