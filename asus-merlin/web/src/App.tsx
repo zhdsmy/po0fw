@@ -147,8 +147,8 @@ export function App() {
     return <Select<string> modal={false} id={key} label={label} description={description} className="w-full"
       value={settings[key]} items={items} onValueChange={(v) => { if (v !== null) change(key, v); }} />;
   }
-  function action(id: Action, label: string, variant: "primary" | "secondary" | "ghost" = "secondary") {
-    return <Button variant={variant} disabled={initializing || running !== null || (!loaded && (id === 1 || id === 4))}
+  function action(id: Action, label: string, variant: "primary" | "secondary" | "ghost" = "secondary", size?: "sm") {
+    return <Button variant={variant} size={size} disabled={initializing || running !== null || (!loaded && (id === 1 || id === 4))}
       loading={running === id} aria-busy={running === id} aria-label={label} onClick={() => run(id)}>{label}</Button>;
   }
   function errorFor(id: Action) {
@@ -160,7 +160,7 @@ export function App() {
 
   return (
     <main className="@container rounded-xl border border-kumo-line bg-kumo-base text-kumo-default">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-kumo-line px-6 py-5">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-kumo-line px-6 py-5">
         <div className="flex min-w-0 items-start gap-3">
           <img src="/res/icon-po0fw.png" width="44" height="44" alt="" className="shrink-0" />
           <div className="grid gap-1">
@@ -175,7 +175,7 @@ export function App() {
       </header>
 
       <section aria-label="运行状态" className="grid gap-4 border-b border-kumo-line px-6 py-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="grid min-w-0 gap-0.5">
             <p className="flex items-start gap-2 text-base font-semibold text-kumo-strong">
               <span aria-hidden className={`mt-2 size-2 shrink-0 rounded-full ${dots[status?.tone ?? "neutral"]}`} />
@@ -230,7 +230,7 @@ export function App() {
       </div>
 
       <section aria-labelledby="po0fw-log" className="grid gap-3 px-6 py-5">
-        <SectionHead id="po0fw-log" title="日志">{action(3, "清空日志", "ghost")}</SectionHead>
+        <SectionHead id="po0fw-log" title="日志">{action(3, "清空日志", "ghost", "sm")}</SectionHead>
         {errorFor(3)}
         <div ref={logBox} role="log" aria-labelledby="po0fw-log" tabIndex={0}
           className="max-h-60 overflow-y-auto rounded-lg border border-kumo-line bg-kumo-recessed py-2 text-sm">
