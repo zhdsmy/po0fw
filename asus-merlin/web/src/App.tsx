@@ -48,7 +48,7 @@ function SettingInput({ id, label, value, placeholder, description, secret, onCh
     <div className="flex min-w-0 items-end gap-2">
       <div className="min-w-0 flex-1">
         <Input id={id} label={label} value={value} placeholder={placeholder} description={description}
-          type={secret && !visible ? "password" : "text"} autoComplete="off"
+          type={secret && !visible ? "password" : "text"} autoComplete="off" passwordManagerIgnore={secret}
           autoCapitalize="none" spellCheck={false} onChange={(e) => onChange(e.target.value)} />
       </div>
       {secret && <Button variant="secondary" aria-controls={id} aria-pressed={visible}

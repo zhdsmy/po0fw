@@ -19,6 +19,8 @@ test("defaults, four wire payloads, conditional fields, visibility and saved set
   const visible = async (id, expected) => assert.equal(await field(id).isVisible(), expected);
   const typeSecret = async (id, raw) => {
     assert.equal(await field(id).getAttribute("type"), "password");
+    // Password managers would offer the router login here (seen with 1Password).
+    assert.equal(await field(id).getAttribute("data-1p-ignore"), "true");
     await field(id).fill(raw);
     const toggle = page.locator(`button[aria-controls="${id}"]`);
     await toggle.click();

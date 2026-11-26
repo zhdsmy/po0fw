@@ -127,6 +127,12 @@ update() {
         case "$code" in 000|5??) continue;; esac
         break
     done
+    # 网关的 HTML 错误页（例如 openresty 的 400）只留标题，去掉重复的状态码
+    case "$body" in
+        *'<title>'*'</title>'*)
+            body=$(printf '%s' "$body" | sed 's/.*<title>\([^<]*\)<\/title>.*/\1/')
+            body=${body#"$code "};;
+    esac
 
     case "$code" in
         200) ;;

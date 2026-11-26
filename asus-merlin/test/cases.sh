@@ -67,6 +67,9 @@ $S run cron; ok backoff-expired '[ "$(curls)" = 1 ] && st | grep -q 未变化'
 
 t $HOME_C24; printf '502\n<html>\n<head><title>502 Bad Gateway</title></head>\n<body>x</body>\n</html>\n' >/state/resp.1
 $S run cron; ok 5xx '[ "$(curls)" = 3 ] && [ "$(logn)" = 1 ] && [ "$(cnt /tmp/upload/po0fw_status.txt)" = 2 ]'
+ok 5xx-html-title 'grep -q "cron: HTTP 502 Bad Gateway\$" /tmp/upload/po0fw_log.txt && st2 | grep -qx "Bad Gateway *" && ! grep -q "<" /tmp/upload/po0fw_log.txt /tmp/upload/po0fw_status.txt'
+t $HOME_C24; resp 1 400 '<html><head><title>400 Bad Request</title></head><body><center><h1>400 Bad Request</h1></center><hr><center>openresty</center></body></html>'
+$S run cron; ok 4xx-html-title '[ "$(curls)" = 1 ] && grep -q "cron: HTTP 400 Bad Request\$" /tmp/upload/po0fw_log.txt && st | grep -q "HTTP 400\$" && st2 | grep -qx "Bad Request *"'
 t $HOME_C24; resp 1 000; slot1 $HOME_C24 2
 $S run cron; ok 000-then-200 '[ "$(curls)" = 2 ] && st | grep -q 未变化'
 t $HOME_C24; resp 1 404 '<pre>Cannot POST /api/firewall/pgnfw_TESTtoken123/add</pre>'
