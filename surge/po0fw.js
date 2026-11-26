@@ -10,8 +10,10 @@
  *     本机网段已钉在另一个槽位，说明已经加白，按成功处理（响应不含 currentIp）。
  *   - 无效 token：400 {"code":400,"message":"serviceId is required"}。
  *
- * 参数：tokens=pgnfw_xxx[@槽位][,pgnfw_yyy[@槽位]]&skip_ssid=Wi-Fi名[,Wi-Fi名]&notify_update=0|1
+ * 参数：tokens=pgnfw_xxx[@槽位][,pgnfw_yyy[@槽位]]&skip_ssid=Wi-Fi名[,Wi-Fi名]
+ *       &ssid_slot=Wi-Fi名@槽位[,Wi-Fi名@槽位]&notify_update=0|1
  *   skip_ssid：连着这些 Wi-Fi 时不请求（家宽由路由器维护时，避免手机把家宽网段钉进自己的槽位）。
+ *   ssid_slot：连着这些 Wi-Fi 时，所有 token 改写对应槽位，代替 token 的 @槽位；skip_ssid 优先。
  *   notify_update：填 1 时，打开后第一次加白成功推送当前网段，之后网段变化推送「旧 → 新」。
  */
 
@@ -47,6 +49,22 @@ function parseTokens(s) {
       var m = t.match(/^(pgnfw_[A-Za-z0-9_-]+)(?:@(\d+))?$/);
       return m ? { token: m[1], slot: m[2] === undefined ? null : Number(m[2]) } : { bad: true, slot: null };
     });
+}
+
+// Wi-Fi名@槽位，按最后一个 @ 拆分（Wi-Fi 名里可以有 @）；格式不对的条目放进 bad
+function parseSsidSlots(s) {
+  var map = Object.create(null);
+  var bad = [];
+  String(s || "")
+    .split(",")
+    .forEach(function (e) {
+      e = e.trim();
+      if (!e) return;
+      var m = e.match(/^(.*\S)\s*@(\d+)$/);
+      if (m) map[m[1]] = Number(m[2]);
+      else bad.push(e);
+    });
+  return { map: map, bad: bad };
 }
 
 // token 配置的摘要，不存 token 原文。换 token、增删或调整顺序后摘要改变
@@ -261,6 +279,8 @@ var skip = String(args.skip_ssid || "")
   .filter(Boolean);
 var notifyUpdate = /^(1|true|on|yes)$/i.test(String(args.notify_update || "").trim());
 var ssid = typeof $network === "object" && $network && $network.wifi ? $network.wifi.ssid : null;
+var ssidSlots = parseSsidSlots(args.ssid_slot);
+var ssidSlot = ssid && ssidSlots.map[ssid] !== undefined ? ssidSlots.map[ssid] : null;
 
 if (ssid && skip.indexOf(ssid) >= 0) {
   // 不请求，也不改通知状态
@@ -273,7 +293,16 @@ if (ssid && skip.indexOf(ssid) >= 0) {
 } else if (items.length === 0) {
   var hint = "在模块参数 tokens 里填入 pgnfw_ token";
   finish(false, "no-token", "po0 加白：未配置 token", hint, ["⚠️ 未配置 token", hint]);
+} else if (ssidSlots.bad.length) {
+  var msg = "ssid_slot 格式错误：" + ssidSlots.bad.join("，") + "。应写成 Wi-Fi名@槽位";
+  finish(false, "fail", "po0 加白：参数错误", msg, ["⚠️ 参数错误", msg]);
 } else {
+  // 槽位只在本次请求里替换；SIG 仍按 token 原配置算，切换网络不会重置通知状态
+  if (ssidSlot !== null) {
+    items = items.map(function (it) {
+      return it.bad ? it : { token: it.token, slot: ssidSlot };
+    });
+  }
   run(items).catch(function (e) {
     var msg = redact((e && e.message) || e);
     finish(false, "fail", "po0 加白：脚本出错", msg, ["💥 脚本出错", msg]);

@@ -21,7 +21,7 @@
 | 1 | 家宽 | 路由器插件（槽位 1）；家里常驻的 Surge 设备可用 `@1` 作备份 |
 | 其余 | 其他固定出口 | 按需分配 |
 
-手机连接家里 Wi-Fi 时，用 `skip_ssid` 跳过请求，避免把家宽网段写入手机槽位。同一网段已在其他槽位时，服务端会返回 `403 IP is already pinned to another slot.`，两个方案都按成功处理。
+手机连接家里 Wi-Fi 时，用 `skip_ssid` 跳过请求，避免把家宽网段写入手机槽位；也可以用 `ssid_slot=<家里的 Wi-Fi>@1` 让手机在家时写入家宽槽位。同一网段已在其他槽位时，服务端会返回 `403 IP is already pinned to another slot.`，两个方案都按成功处理。
 
 ## API
 

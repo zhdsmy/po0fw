@@ -267,3 +267,55 @@ test("skip_ssid：连着家里 Wi-Fi 时不请求、不改状态", async () => {
   r = await run({ argument: "tokens=pgnfw_abc@0&skip_ssid=", network: home, responses: [OK] });
   assert.equal(r.calls.length, 1);
 });
+
+test("ssid_slot：连着列出的 Wi-Fi 时所有 token 改写该槽位，其他网络用 token 的槽位", async () => {
+  const argument = "tokens=pgnfw_a@0,pgnfw_b&ssid_slot=Home 5G@1,Cafe@Work @3";
+  const store = {};
+  let r = await run({ argument, network: { wifi: { ssid: "Home 5G" } }, responses: [OK, OK], store });
+  assert.deepEqual(
+    r.calls.map((c) => c.url),
+    ["https://124.221.69.228/api/firewall/pgnfw_a/add?slot=1", "https://124.221.69.228/api/firewall/pgnfw_b/add?slot=1"]
+  );
+  assert.match(r.out.content, /^#1 📌1 ✅/);
+  // Wi-Fi 名里有 @ 时按最后一个 @ 拆分，名字和 @ 之间的空格忽略
+  r = await run({ argument, network: { wifi: { ssid: "Cafe@Work" } }, responses: [OK, OK], store });
+  assert.equal(r.calls[0].url, "https://124.221.69.228/api/firewall/pgnfw_a/add?slot=3");
+  // 没列出的 Wi-Fi 和蜂窝：用 token 自己的槽位
+  r = await run({ argument, network: { wifi: { ssid: "Other" } }, responses: [OK, OK], store });
+  assert.equal(r.calls[0].url, "https://124.221.69.228/api/firewall/pgnfw_a/add?slot=0");
+  assert.equal(r.calls[1].url, "https://124.221.69.228/api/firewall/pgnfw_b/add");
+  r = await run({ argument, network: { wifi: {} }, responses: [OK, OK], store });
+  assert.equal(r.calls[0].url, "https://124.221.69.228/api/firewall/pgnfw_a/add?slot=0");
+  assert.equal(r.notes.length, 0);
+});
+
+test("ssid_slot：切换网络不重置通知状态；notify_update 推送实际写入的槽位", async () => {
+  const store = {};
+  const argument = "tokens=pgnfw_a@0&ssid_slot=Home@1&notify_update=1";
+  let r = await run({ argument, responses: [BAD], store });
+  assert.equal(r.notes.length, 1);
+  r = await run({ argument, network: { wifi: { ssid: "Home" } }, responses: [BAD], store });
+  assert.equal(r.notes.length, 0);
+  r = await run({ argument, network: { wifi: { ssid: "Home" } }, responses: [OK], store });
+  assert.deepEqual(
+    r.notes.map((n) => n[1]),
+    ["✅ 已加白 · 📌 槽位 1", "🎉 已恢复"]
+  );
+});
+
+test("ssid_slot：skip_ssid 优先；格式错误不发请求，只通知一次", async () => {
+  let r = await run({
+    argument: "tokens=pgnfw_a@0&skip_ssid=Home&ssid_slot=Home@1",
+    network: { wifi: { ssid: "Home" } },
+  });
+  assert.equal(r.calls.length, 0);
+  assert.equal(r.out.title, "po0 加白 已跳过");
+  const store = {};
+  const argument = "tokens=pgnfw_a@0&ssid_slot=Home@1,Office,@2";
+  r = await run({ argument, responses: [OK], store });
+  assert.equal(r.calls.length, 0);
+  assert.equal(r.out.icon, RED);
+  assert.deepEqual(r.notes, [[NAME, "⚠️ 参数错误", "ssid_slot 格式错误：Office，@2。应写成 Wi-Fi名@槽位"]]);
+  r = await run({ argument, responses: [OK], store });
+  assert.equal(r.notes.length, 0);
+});
