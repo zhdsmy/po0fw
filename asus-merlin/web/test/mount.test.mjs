@@ -44,6 +44,9 @@ test("Kumo controls, focus and popup stay in the dark shadow tree", async (t) =>
   // A quick reopen followed by Escape used to leave Base UI's modal backdrop
   // over the ASUS shell and the plugin buttons after the list disappeared.
   await trigger.click();
+  // On a slow runner the click can land before the list reopens; Escape
+  // then reaches a closed select and the list opens after it.
+  await page.getByRole("combobox", { name: "检查间隔", expanded: true }).waitFor();
   await page.keyboard.press("Escape");
   await list.waitFor({ state: "hidden" });
   await page.getByRole("button", { name: "返回软件中心" }).click();
